@@ -430,5 +430,89 @@
         "analysis":  "市政府承诺未来 12 个月继续投入(plus de 60 000 euros)购买奖品——说明它认为该计划有效、想要「延续这一行动」(prolonger cette opération qu\u0027elle juge efficace)。B 把 6 万欧说成「单个奖项」、C 把「将要花」误作「已经花」、D 把已建好的网站说成「承诺去建且用于监控」，均与原文不符。",
         "key_point":  "细节理解（同义改写 + 时态 / 数字陷阱）",
         "error_reason":  "B / C / D 多在数字、时态(已花 vs 将花)、用途上做手脚；A 对应「未来 12 个月继续投入 = 延续有效的计划」。"
+    },
+    {
+        "id":  "tcf-27",
+        "exam_type":  "TCF",
+        "main_category":  "语法",
+        "sub_type":  "形容词语义辨析（dangereux / grave / sévère / sérieux）",
+        "image_path":  "images/tcf/f633e8e31f1cf104cc993c54d8ff91a5.png",
+        "original_text":  "Il fait très chaud à l’intérieur et il est malheureusement...\n... d’ouvrir la fenêtre.\nA. grave\nB. sévère\nC. dangereux\nD. sérieux",
+        "correct_answer":  "C. dangereux",
+        "analysis":  "结构 il est + adjectif + de + infinitif 用来评价后面的动作。这里说室内很热，但“不幸的是，打开窗户是……”；能直接评价 ouvrir la fenêtre 这一动作风险的形容词是 dangereux（危险的）。grave、sévère、sérieux 多用于问题、情况、疾病等“严重”，不自然搭配 d’ouvrir la fenêtre。",
+        "key_point":  "形容词 dangereux 用于 il est dangereux de faire qch；区分“危险”与“严重”",
+        "error_reason":  "误选 sévère 是把“严重”套到动作上；本句评价的是“开窗”这个动作是否有风险，应选 dangereux。"
+    },
+    {
+        "id":  "tcf-28",
+        "exam_type":  "TCF",
+        "main_category":  "语法",
+        "sub_type":  "介词与固定搭配（avec）",
+        "image_path":  "images/tcf/78226cd3062210681cfa35fdd36be257.png",
+        "original_text":  "Pratiquez votre français...\n... nos collections d’exercices interactifs !\nA. avec\nB. de\nC. par\nD. sur",
+        "correct_answer":  "A. avec",
+        "analysis":  "句意是“用/通过我们的互动练习合集来练习你的法语”。表示借助某个工具、资源或对象一起完成动作，常用 avec：pratiquer son français avec des exercices。de、par、sur 都不能自然连接 pratiquer votre français 与 nos collections。",
+        "key_point":  "介词 avec 表示“借助、使用、和……一起”；pratiquer avec des exercices",
+        "error_reason":  "误选 sur 多受中文“在某平台上练习”影响，但这里后面是 collections d’exercices，表达“用这些练习合集”应使用 avec。"
+    },
+    {
+        "id":  "tcf-29",
+        "exam_type":  "TCF",
+        "main_category":  "语法",
+        "sub_type":  "代词（直接宾语代词 l’ / la / lui）",
+        "image_path":  "images/tcf/b263c6d05d3acbfb7b8b51bdd2dd8be4.png",
+        "original_text":  "Je n’ai pas encore téléphoné à Anne mais je...\n... appellerai ce soir.\nA. l’\nB. la\nC. les\nD. lui",
+        "correct_answer":  "A. l’",
+        "analysis":  "虽然 téléphoner à Anne 要用间接宾语（lui），但后半句动词是 appeler。appeler quelqu’un 是直接及物动词，所以 Anne 应由直接宾语代词 la 替代；由于后面 appellerai 以元音音素开头，la 省音为 l’。因此是 je l’appellerai ce soir。",
+        "key_point":  "appeler qn 使用直接宾语代词；la 在元音前省音为 l’",
+        "error_reason":  "误选 la 是忽略了 appellerai 前需要省音；误选 lui 则是把 téléphoner à qn 的搭配错误迁移到 appeler qn。"
+    },
+    {
+        "id":  "tcf-30",
+        "exam_type":  "TCF",
+        "main_category":  "语法",
+        "sub_type":  "固定表达（être tenu pour responsable）",
+        "image_path":  "images/tcf/27bf670a0c7adfcde0e51cc843257584.png",
+        "original_text":  "La direction ne saurait être tenue pour...\n... en cas de vol.\nA. auteur\nB. cadre\nC. garant\nD. responsable",
+        "correct_answer":  "D. responsable",
+        "analysis":  "固定表达 être tenu pour responsable 意为“被认为负有责任 / 被追究责任”。句意是“如发生盗窃，管理方不能被追究责任”。auteur 是作者/作案者，cadre 是框架/管理人员，garant 是担保人，都不符合 être tenu pour ... en cas de vol 的法律责任语境。",
+        "key_point":  "固定搭配 être tenu pour responsable（被视为有责任）",
+        "error_reason":  "误选 garant 是受“担保/负责”语义干扰，但法语表达追责时用 être tenu pour responsable。"
+    },
+    {
+        "id":  "tcf-31",
+        "exam_type":  "TCF",
+        "main_category":  "语法",
+        "sub_type":  "动词搭配（s’étendre de... à...）",
+        "image_path":  "images/tcf/4822f491ed6a984dce996ab28ab00894.png",
+        "original_text":  "L’âge de la pierre taillée...\n... de 2 millions à 10 000 ans avant J.-C.\nA. dure\nB. s’écoule\nC. s’étend\nD. survit",
+        "correct_answer":  "C. s’étend",
+        "analysis":  "表示一个时期“从……延续到……”常用 s’étendre de ... à ...。句子说旧石器时代/打制石器时代从公元前 200 万年延伸到公元前 1 万年，因此选 s’étend。durer 可表示持续，但通常不与 de... à... 这样搭配；s’écouler 表时间流逝，survivre 表幸存。",
+        "key_point":  "时间范围表达：s’étendre de A à B（从 A 延续到 B）",
+        "error_reason":  "误选 dure 是只看到“持续”的意思，却忽略了后面的固定结构 de... à...，该结构更自然搭配 s’étendre。"
+    },
+    {
+        "id":  "tcf-32",
+        "exam_type":  "TCF",
+        "main_category":  "语法",
+        "sub_type":  "复合词（portrait-robot）",
+        "image_path":  "images/tcf/897c0987edea79ecb18dcb96c99c83dd.png",
+        "original_text":  "Notre émission vous propose de dresser le portrait...\n... du nouveau chef du gouvernement.\nA. automate\nB. machine\nC. mécanique\nD. robot",
+        "correct_answer":  "D. robot",
+        "analysis":  "portrait-robot 原指根据描述合成的人像，泛指“人物画像 / 概貌刻画”。dresser le portrait-robot de qn 是固定搭配，意为勾勒某人的典型形象或画像。automate、machine、mécanique 都不能构成该固定复合名词。",
+        "key_point":  "复合名词 portrait-robot（人物画像、概貌）",
+        "error_reason":  "误选 automate 多因同属“机器/自动装置”语义场，但固定表达只能是 portrait-robot。"
+    },
+    {
+        "id":  "tcf-33",
+        "exam_type":  "TCF",
+        "main_category":  "语法",
+        "sub_type":  "形容词语义辨析（terrassé）",
+        "image_path":  "images/tcf/5a9e522fe27a14ae8b39f54fdd0bd3c5.png",
+        "original_text":  "Quelle catastrophe ! En entendant la nouvelle j’ai été...\nA. enterré.\nB. harassé.\nC. ratissé.\nD. terrassé.",
+        "correct_answer":  "D. terrassé",
+        "analysis":  "terrassé 可表示“被击垮、被压倒、震惊到站不住”，符合听到坏消息后的强烈情绪反应。enterré 是埋葬，harassé 是疲惫不堪，ratissé 是被梳理/扫荡，均不符合 “Quelle catastrophe ! En entendant la nouvelle...” 的语境。",
+        "key_point":  "形容词/过去分词 terrassé：被坏消息击垮、震惊",
+        "error_reason":  "误选 enterré 是被词形相近或灾难语境误导；表达“听到消息后被击垮”应使用 terrassé。"
     }
 ]
