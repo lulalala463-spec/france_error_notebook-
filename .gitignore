@@ -1,0 +1,8 @@
+.ocr-cache/
+.paddlex-cache/
+__pycache__/
+*.pyc
+tmp-*.jpg
+tmp-*.png
+*.backup.json
+*.backup.html

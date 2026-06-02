@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>法语错题本 · TCF / TEF</title>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   :root{
     --bg:#eef1f8; --panel:#ffffff; --ink:#1f2433; --ink-soft:#5b6478; --line:#e6e9f2;
@@ -164,6 +165,142 @@
   .sec p{margin:0;color:#39404f;}
   .sec ol{margin:0;padding-left:20px;color:#39404f;}
 
+  /* TEF mock exam */
+  .mode-switch{padding:24px 0 0;}
+  .mode-panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow);display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;}
+  .mode-tabs{display:flex;gap:8px;flex-wrap:wrap;}
+  .mode-btn{border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px 16px;font:inherit;font-weight:800;color:var(--ink-soft);cursor:pointer;}
+  .mode-btn.active{background:var(--brand);border-color:var(--brand);color:#fff;box-shadow:0 4px 12px rgba(79,70,229,.26);}
+  .mode-note{font-size:13px;color:var(--ink-soft);}
+  .tef-shell{padding-top:18px;}
+  .tef-topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
+  .tef-title h2{margin:0;font-size:22px;line-height:1.25;}
+  .tef-title p{margin:4px 0 0;color:var(--ink-soft);font-size:13.5px;}
+  .tef-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .tef-sections{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:10px;margin-bottom:14px;}
+  .tef-section-btn{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:11px 10px;font:inherit;font-weight:800;color:var(--ink);cursor:pointer;box-shadow:var(--shadow);text-align:left;}
+  .tef-section-btn span{display:block;font-size:12px;font-weight:700;color:var(--ink-soft);}
+  .tef-section-btn.active{border-color:var(--brand);background:var(--brand-soft);color:var(--brand);}
+  .tef-workspace{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(360px,.65fr);gap:16px;align-items:start;}
+  .pdf-pane,.answer-pane,.tef-placeholder{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;}
+  .pdf-toolbar{position:sticky;top:0;z-index:2;background:#fff;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px;}
+  .pdf-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .pdf-controls input{width:76px;border:1px solid var(--line);border-radius:9px;padding:8px 9px;font:inherit;font-size:13px;}
+  .pdf-btn,.tef-small-btn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;font-weight:800;color:var(--ink-soft);cursor:pointer;}
+  .pdf-btn:hover,.tef-small-btn:hover{border-color:#cdd2e8;color:var(--brand);}
+  .pdf-status{font-size:12.5px;color:var(--ink-soft);}
+  .pdf-viewer{min-height:620px;background:#f6f7fb;padding:16px;display:flex;align-items:flex-start;justify-content:center;overflow:auto;}
+  .pdf-viewer canvas{max-width:100%;height:auto;background:#fff;box-shadow:0 8px 28px rgba(20,28,60,.16);}
+  .pdf-message{padding:28px;color:var(--ink-soft);text-align:center;}
+  .pdf-message.error{color:var(--warn);background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:12px;margin:16px;}
+  .answer-pane{max-height:calc(100vh - 18px);position:sticky;top:10px;display:flex;flex-direction:column;}
+  .answer-head{padding:14px;border-bottom:1px solid var(--line);display:grid;gap:10px;}
+  .answer-head h3{margin:0;font-size:17px;}
+  .answer-meta{display:flex;gap:8px;flex-wrap:wrap;color:var(--ink-soft);font-size:12.5px;}
+  .tef-progress{height:8px;background:#edf0f7;border-radius:999px;overflow:hidden;}
+  .tef-progress i{display:block;height:100%;background:var(--brand);border-radius:999px;}
+  .question-groups{overflow:auto;padding:14px;display:grid;gap:12px;}
+  .question-group{border:1px solid var(--line);border-radius:12px;background:#fafbff;padding:10px;}
+  .question-group h4{margin:0 0 8px;font-size:12px;color:var(--ink-soft);}
+  .question-row{display:grid;grid-template-columns:42px 1fr;gap:8px;align-items:center;border-top:1px dashed #e2e6f2;padding:9px 0;}
+  .question-row:first-of-type{border-top:0;padding-top:0;}
+  .question-no{font-weight:900;color:var(--ink);font-size:13px;}
+  .choice-set{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;}
+  .choice{border:1px solid var(--line);background:#fff;border-radius:8px;min-height:34px;font:inherit;font-size:13px;font-weight:900;color:var(--ink-soft);cursor:pointer;}
+  .choice.selected{background:var(--brand);border-color:var(--brand);color:#fff;}
+  .choice.correct{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok);}
+  .choice.wrong{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn);}
+  .choice.unanswered{border-style:dashed;}
+  .question-result{grid-column:1 / -1;font-size:12px;color:var(--ink-soft);}
+  .audio-box{grid-column:1 / -1;display:grid;gap:6px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px;}
+  .audio-box audio{width:100%;}
+  .audio-missing{color:var(--warn);font-size:12.5px;font-weight:800;}
+  .answer-footer{border-top:1px solid var(--line);padding:12px 14px;display:grid;gap:10px;background:#fff;}
+  .score-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+  .score-card{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:8px;font-size:12px;color:var(--ink-soft);}
+  .score-card b{display:block;color:var(--ink);font-size:16px;line-height:1.2;}
+  .tef-primary{border:0;background:var(--brand);color:#fff;border-radius:11px;padding:10px 14px;font:inherit;font-weight:900;cursor:pointer;}
+  .tef-danger{border:1px solid var(--warn-line);background:var(--warn-bg);color:var(--warn);border-radius:11px;padding:10px 14px;font:inherit;font-weight:900;cursor:pointer;}
+  .tef-muted{border:1px solid var(--line);background:#fff;color:var(--ink-soft);border-radius:11px;padding:10px 14px;font:inherit;font-weight:900;cursor:pointer;}
+  .tef-placeholder{padding:22px;display:grid;gap:12px;}
+  .tef-placeholder h3{margin:0;font-size:20px;}
+  .tef-placeholder p{margin:0;color:var(--ink-soft);}
+  .tef-review-list{max-height:180px;overflow:auto;border:1px solid var(--line);border-radius:10px;background:#fafbff;padding:8px;display:grid;gap:6px;font-size:12.5px;}
+  .tef-review-item{display:flex;justify-content:space-between;gap:8px;background:#fff;border:1px solid #edf0f7;border-radius:8px;padding:7px 8px;}
+  .tef-question-card{padding:14px;display:grid;gap:12px;}
+  .tef-question-card h3{margin:0;font-size:24px;text-align:center;}
+  .tef-question-card .tcf-online-options .choice{grid-template-columns:32px;justify-content:center;text-align:center;}
+  .tef-summary-panel{border-top:1px solid var(--line);padding:14px;display:grid;gap:18px;background:#fbfcff;}
+  .tef-single-result-card{max-width:360px;width:100%;justify-self:center;}
+  .tcf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+  .tcf-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:14px;display:grid;gap:12px;}
+  .tcf-card h3{margin:0;font-size:18px;}
+  .tcf-card p{margin:0;color:var(--ink-soft);font-size:13px;}
+  .tcf-card audio{width:100%;}
+  .tcf-card-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .tcf-form{border:1px dashed #cbd5e1;background:#f8fafc;border-radius:12px;padding:10px;display:grid;gap:8px;}
+  .tcf-form label{display:grid;gap:4px;font-size:12px;font-weight:800;color:var(--ink-soft);}
+  .tcf-form input,.tcf-form textarea,.tcf-form select{width:100%;border:1px solid var(--line);border-radius:9px;padding:8px 9px;font:inherit;font-size:13px;background:#fff;color:var(--ink);}
+  .tcf-form textarea{min-height:70px;resize:vertical;}
+  .shot.no-shot{cursor:default;min-height:170px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1f2433,#4f46e5);}
+  .shot.no-shot .num{position:static;font-size:18px;padding:8px 14px;}
+  .b-source{background:#f8fafc;color:#475569;border-color:#d9e1ef;}
+  .audio-detail{display:grid;gap:8px;background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:10px;}
+  .audio-detail audio{width:100%;}
+  .tcf-exam-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;align-items:start;}
+  .tcf-lesson-panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:10px;display:grid;gap:8px;position:sticky;top:10px;}
+  .tcf-lesson-btn{border:1px solid var(--line);background:#fff;border-radius:11px;padding:9px 10px;font:inherit;font-weight:900;color:var(--ink);cursor:pointer;text-align:left;}
+  .tcf-lesson-btn span{display:block;font-size:11.5px;color:var(--ink-soft);font-weight:700;}
+  .tcf-lesson-btn.active{background:var(--brand-soft);border-color:var(--brand);color:var(--brand);}
+  .tcf-exam-panel{display:grid;gap:14px;}
+  .tcf-paper-head,.tcf-question-card,.tcf-result-panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:14px;}
+  .tcf-paper-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;}
+  .tcf-paper-head h3,.tcf-question-card h3,.tcf-result-panel h3{margin:0;font-size:18px;}
+  .tcf-paper-head p{margin:4px 0 0;color:var(--ink-soft);font-size:13px;}
+  .tcf-instruction{margin:10px 0 0;color:var(--ink-soft);font-size:14px;font-weight:800;text-align:center;}
+  .tcf-prompt{margin:12px 0;background:#fafbff;border:1px solid var(--line);border-radius:12px;padding:12px;color:#2b3142;}
+  .tcf-question-layout{display:grid;gap:14px;margin-top:12px;}
+  .tcf-question-layout.withImage{grid-template-columns:minmax(320px,.95fr) minmax(320px,1.05fr);align-items:start;}
+  .tcf-document-figure{margin:0;background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:0 8px 24px rgba(20,28,60,.08);cursor:zoom-in;}
+  .tcf-document-figure img{display:block;width:100%;height:auto;border-radius:10px;background:#fff;}
+  .tcf-document-figure figcaption{margin-top:8px;color:var(--ink-soft);font-size:12px;text-align:center;}
+  .tcf-document-text{white-space:pre-line;background:#fff;border:1px dashed #cbd5e1;border-radius:10px;padding:10px;color:#39404f;font-size:13px;}
+  .tcf-online-options{display:grid;gap:8px;}
+  .tcf-online-options .choice{display:grid;grid-template-columns:28px 1fr;gap:8px;align-items:center;text-align:left;min-height:44px;padding:9px 10px;}
+  .tcf-nav-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
+  .tcf-result-list{display:grid;gap:8px;margin-top:12px;}
+  .tcf-result-row{border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px;display:grid;gap:4px;font-size:13px;}
+  .tcf-result-row.correct{border-color:var(--ok-line);background:var(--ok-bg);}
+  .tcf-result-row.wrong{border-color:var(--warn-line);background:var(--warn-bg);}
+  .tcf-result-image{max-width:260px;width:100%;border-radius:10px;border:1px solid var(--line);background:#fff;cursor:zoom-in;}
+  .tcf-result-row p{margin:0;color:#39404f;}
+  .tcf-result-panel > h3,.tcf-result-panel > .score-grid,.tcf-result-panel > .tcf-result-list{display:none;}
+  .tcf-result-hero{max-width:620px;margin:0 auto 26px;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:28px;text-align:center;}
+  .tcf-total-score{display:flex;align-items:baseline;justify-content:center;color:var(--brand);}
+  .tcf-total-score b{font-size:56px;line-height:1;font-weight:950;}
+  .tcf-total-score span{font-size:24px;font-weight:800;}
+  .tcf-result-hero p{margin:10px 0 0;color:var(--ink-soft);font-weight:800;}
+  .tcf-section-results{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:12px;}
+  .tcf-section-result-card{background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 14px 36px rgba(31,42,68,.10);padding:24px;display:grid;gap:14px;justify-items:center;min-height:260px;}
+  .tcf-section-result-card h3{justify-self:start;margin:0;font-size:22px;}
+  .tcf-section-result-card p{justify-self:start;margin:0;color:var(--ink-soft);font-size:17px;}
+  .tcf-section-result-card small{color:var(--ink-soft);font-weight:900;}
+  .tcf-ring{--pct:0;width:150px;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--brand) calc(var(--pct)*1%), #eef2f7 0);position:relative;}
+  .tcf-ring::before{content:"";position:absolute;inset:18px;border-radius:50%;background:#fff;}
+  .tcf-ring span{position:relative;font-size:30px;font-weight:950;color:#111827;}
+  .tcf-recap{margin-top:34px;}
+  .tcf-recap h3{font-size:28px;margin:0 0 18px;}
+  .tcf-recap h3::after{content:"";display:block;width:70px;height:3px;background:var(--brand);margin-top:12px;}
+  .tcf-recap-grid{display:grid;grid-template-columns:repeat(10,minmax(44px,1fr));gap:12px;}
+  .tcf-recap-grid span{height:52px;border-radius:8px;background:#fff;border:1px solid var(--line);display:grid;place-items:center;font-weight:900;color:var(--ink-soft);box-shadow:0 8px 18px rgba(31,42,68,.06);}
+  .tcf-recap-grid span.ok{color:var(--ok);border-color:var(--ok-line);background:var(--ok-bg);}
+  .tcf-recap-grid span.wrong{color:var(--warn);border-color:var(--warn-line);background:var(--warn-bg);}
+  .tcf-recap-grid span.unanswered{color:#64748b;border-style:dashed;}
+  @media (max-width:900px){
+    .tcf-section-results{grid-template-columns:1fr;}
+    .tcf-recap-grid{grid-template-columns:repeat(5,minmax(44px,1fr));}
+  }
+
   /* states */
   .empty,.error{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:48px 24px;
     text-align:center;color:var(--ink-soft);box-shadow:var(--shadow);}
@@ -187,6 +324,14 @@
     .search input{width:100%;}
     .search{flex:1;}
     .hero h1{font-size:23px;}
+    .tef-sections{grid-template-columns:1fr;}
+    .tef-workspace{grid-template-columns:1fr;}
+    .tcf-exam-layout{grid-template-columns:1fr;}
+    .tcf-question-layout.withImage{grid-template-columns:1fr;}
+    .tcf-lesson-panel{position:static;grid-template-columns:repeat(3,minmax(0,1fr));}
+    .answer-pane{position:static;max-height:none;}
+    .pdf-viewer{min-height:420px;padding:10px;}
+    .score-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
   }
 </style>
 </head>
@@ -210,7 +355,20 @@
     </div>
   </header>
 
-  <div class="toolbar">
+  <div class="mode-switch">
+    <div class="wrap" style="padding-bottom:0;">
+      <div class="mode-panel">
+        <div class="mode-tabs">
+          <button class="mode-btn" :class="{active:mode==='mistakes'}" @click="showMistakes">错题本</button>
+          <button class="mode-btn" :class="{active:mode==='tef'}" @click="showTef">TEF 模拟卷</button>
+          <button class="mode-btn" :class="{active:mode==='tcf'}" @click="showTcf">TCF 模拟卷</button>
+        </div>
+        <div class="mode-note">{{ mode==='tef' ? 'PDF 卷面 + CE / CO / LS 逐题答题' : (mode==='tcf' ? 'TV5MONDE 官方训练 L01-L17' : '继续复习现有错题，不影响 data.json') }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="mode==='mistakes'" class="toolbar">
     <div class="wrap toolbar-inner" style="padding-bottom:0;">
       <div class="filters">
         <div class="filter-group">
@@ -220,6 +378,12 @@
               {{ t }} <span class="cnt">{{ examCount(t) }}</span>
             </button>
           </div>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">来源</span>
+          <select class="type-select" v-model="sourceTab">
+            <option v-for="s in sourceOptions" :key="s" :value="s">{{ s }}（{{ sourceCount(s) }}）</option>
+          </select>
         </div>
         <div class="filter-group">
           <span class="filter-label">题目类型</span>
@@ -263,7 +427,7 @@
     </div>
   </div>
 
-  <div class="wrap">
+  <div v-if="mode==='mistakes'" class="wrap">
     <div v-if="loading" class="loading"><div class="spin"></div>正在载入 data.json …</div>
 
     <div v-else-if="error" class="error">
@@ -275,15 +439,19 @@
     <template v-else>
       <div v-if="filtered.length" class="grid">
         <article v-for="(it,idx) in filtered" :key="it.id" class="card">
-          <div class="shot" @click="lightbox=it.image_path">
+          <div v-if="it.image_path" class="shot" @click="lightbox=it.image_path">
             <img :src="it.image_path" :alt="it.id" loading="eager" />
             <span class="num">{{ it.id.toUpperCase() }}</span>
             <span class="zoom"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3M11 8v6M8 11h6"/></svg></span>
+          </div>
+          <div v-else class="shot no-shot">
+            <span class="num">{{ it.id.toUpperCase() }}</span>
           </div>
           <div class="body">
             <div class="badges">
               <span class="badge" :class="it.exam_type==='TEF' ? 'b-exam-tef' : 'b-exam-tcf'">{{ it.exam_type }}</span>
               <span class="badge" :class="it.main_category==='语法' ? 'b-gram':'b-read'">{{ it.main_category }}</span>
+              <span class="badge b-source">{{ it.source || '原始错题' }}</span>
               <span class="badge b-sub">{{ it.sub_type }}</span>
               <span class="badge b-qtype">{{ it.questionType }}</span>
               <span class="badge b-micro">{{ it.microType }}</span>
@@ -298,6 +466,9 @@
 
             <div class="answer">
               <span class="lab">正确答案</span><span class="val">{{ it.correct_answer }}</span>
+            </div>
+            <div v-if="it.myAnswer" class="answer" style="background:#fff7ed;border-color:#fed7aa;">
+              <span class="lab" style="background:#c2410c;">我的答案</span><span class="val" style="color:#c2410c;">{{ it.myAnswer }}</span>
             </div>
 
             <div class="review-strip">
@@ -326,7 +497,15 @@
             </button>
 
             <div v-if="open.has(it.id)" class="analysis">
-              <div class="sec a"><h4>📖 详细解析</h4><p>{{ it.analysis }}</p></div>
+              <div v-if="it.audio_path" class="audio-detail">
+                <b>听力音频</b>
+                <audio controls preload="none" :src="it.audio_path"></audio>
+              </div>
+              <div v-if="it.image_path" class="audio-detail">
+                <b>题目材料图片</b>
+                <img :src="it.image_path" :alt="it.id" style="width:100%;border-radius:10px;cursor:zoom-in;" @click="lightbox=it.image_path" />
+              </div>
+              <div class="sec a"><h4>📖 详细解析</h4><p>{{ it.analysis || '暂无解析。' }}</p></div>
               <div class="sec k"><h4>🎯 核心考点</h4><p>{{ it.key_point }}</p></div>
               <div class="sec e"><h4>⚠️ 常见错因 / 笔记</h4><p>{{ it.error_reason || '（暂无，可自行补充）' }}</p></div>
               <div class="sec r"><h4>复盘动作</h4><ol><li v-for="step in reviewActionSteps(it)" :key="step">{{ step }}</li></ol></div>
@@ -350,7 +529,262 @@
     </template>
   </div>
 
-  <footer class="wrap" style="padding-bottom:0;">法语错题本 · 数据源 data.json · 共 {{ items.length }} 题</footer>
+  <footer v-if="mode==='mistakes'" class="wrap" style="padding-bottom:0;">法语错题本 · 数据源 data.json · 共 {{ items.length }} 题</footer>
+
+  <section v-if="mode==='tef'" class="wrap tef-shell">
+    <div class="tef-topbar">
+      <div class="tef-title">
+        <h2>TEF 模拟卷</h2>
+        <p>基于 TEF_test_blanc.pdf，答案和错题仅保存在浏览器 localStorage。</p>
+      </div>
+      <div class="tef-actions">
+        <button class="tef-muted" type="button" @click="exportTefWrongJson">导出 TEF 错题 JSON</button>
+        <button class="tef-danger" type="button" @click="resetTefPractice">重新练习</button>
+      </div>
+    </div>
+
+    <div class="tef-sections">
+      <button v-for="section in tefSections" :key="section.id" class="tef-section-btn" :class="{active:tefSection===section.id}" @click="setTefSection(section.id)">
+        {{ section.short }} {{ section.name }}
+        <span>{{ section.note }}</span>
+      </button>
+    </div>
+
+    <div v-if="tefObjectiveSections.includes(tefSection)" class="tef-workspace">
+      <div class="pdf-pane">
+        <div class="pdf-toolbar">
+          <div class="pdf-controls">
+            <button class="pdf-btn" type="button" @click="prevPdfPage">上一页</button>
+            <button class="pdf-btn" type="button" @click="nextPdfPage">下一页</button>
+            <input type="number" min="1" :max="pdfPageCount || 1" v-model.number="pdfJumpPage" @keyup.enter="jumpPdfPage" />
+            <button class="pdf-btn" type="button" @click="jumpPdfPage">跳转</button>
+          </div>
+          <div class="pdf-controls">
+            <button class="pdf-btn" type="button" @click="zoomPdf(-0.15)">缩小</button>
+            <span class="pdf-status">{{ Math.round(pdfScale * 100) }}%</span>
+            <button class="pdf-btn" type="button" @click="zoomPdf(0.15)">放大</button>
+          </div>
+          <div class="pdf-status">第 {{ pdfPageNum }} / {{ pdfPageCount || '-' }} 页</div>
+        </div>
+        <div v-if="pdfError" class="pdf-message error">{{ pdfError }}</div>
+        <div v-else class="pdf-viewer">
+          <div v-if="pdfLoading" class="pdf-message">正在加载 PDF...</div>
+          <canvas v-show="!pdfLoading" ref="pdfCanvas"></canvas>
+        </div>
+      </div>
+
+      <aside class="answer-pane">
+        <div class="answer-head">
+          <h3>{{ currentTefTitle }}</h3>
+          <div class="answer-meta">
+            <span>已答 {{ tefAnsweredCount }}/40</span>
+            <span>当前题型：{{ currentTefQuestionType }}</span>
+          </div>
+          <div class="tef-progress"><i :style="{width: tefAnsweredCount * 2.5 + '%'}"></i></div>
+        </div>
+
+        <article class="tef-question-card">
+          <div class="answer-meta">
+            <span>{{ tefSectionLabel }}</span>
+            <span>Q{{ currentTefQuestionNo }} / 40</span>
+            <span>{{ currentTefQuestionType }}</span>
+          </div>
+          <div v-if="tefSection==='CO'" class="audio-box">
+            <audio v-if="coAudioMap[currentTefQuestionNo]" controls preload="none" :src="coAudioMap[currentTefQuestionNo]" @error="markAudioMissing(currentTefQuestionNo)"></audio>
+            <div v-if="!coAudioMap[currentTefQuestionNo] || audioMissing[currentTefQuestionNo]" class="audio-missing">音频文件未找到：Q{{ currentTefQuestionNo }}</div>
+          </div>
+          <h3>Q{{ currentTefQuestionNo }}</h3>
+          <p class="tcf-prompt">请查看左侧 PDF 题面作答。</p>
+          <div class="tcf-online-options">
+            <button v-for="choice in tefChoices" :key="choice" type="button" class="choice" :class="choiceClass(currentTefQuestionNo, choice)" @click="selectTefAnswer(currentTefQuestionNo, choice)">
+              <b>{{ choice }}</b>
+            </button>
+          </div>
+          <div class="tcf-nav-row">
+            <button class="tef-muted" type="button" @click="prevTefQuestion" :disabled="tefCurrentIndex===0">上一题</button>
+            <button class="tef-muted" type="button" @click="nextTefQuestion" :disabled="tefCurrentIndex>=39">下一题</button>
+            <button class="tef-primary" type="button" @click="submitTefSection">提交本套练习</button>
+          </div>
+        </article>
+
+        <section v-if="currentTefScore" class="tef-summary-panel">
+          <div class="tcf-result-hero">
+            <div class="tcf-total-score">
+              <b>{{ currentTefScore.correct }}</b><span>/{{ currentTefScore.total }}</span>
+            </div>
+            <p>{{ currentTefScore.answered }} / {{ currentTefScore.total }} 已答 · {{ currentTefScore.wrong }} 题错误 · {{ currentTefScore.level }}</p>
+          </div>
+          <article class="tcf-section-result-card tef-single-result-card">
+            <h3>{{ tefSectionLabel }}</h3>
+            <p>{{ currentTefScore.wrong ? currentTefScore.wrong + ' réponses incorrectes' : 'Toutes vos réponses sont correctes' }}</p>
+            <div class="tcf-ring" :style="{ '--pct': currentTefScore.rateRounded }">
+              <span>{{ currentTefScore.rateRounded }}%</span>
+            </div>
+            <small>{{ currentTefScore.correct }} / {{ currentTefScore.total }}</small>
+          </article>
+          <div class="tcf-recap">
+            <h3>Récapitulatif du test</h3>
+            <div class="tcf-recap-grid">
+              <span v-for="row in currentTefScore.rows" :key="row.qno" :class="{ok:row.myAnswer && row.myAnswer===row.correctAnswer, wrong:row.myAnswer && row.myAnswer!==row.correctAnswer, unanswered:!row.myAnswer}">
+                {{ row.qno }}
+              </span>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <div v-else class="tef-placeholder">
+      <h3>{{ currentTefTitle }}</h3>
+      <p>这一版先作为展示页保留。写作和口语不自动判分，可使用上方 PDF 翻到对应页查看题目。</p>
+      <div class="tef-actions">
+        <button class="tef-primary" type="button" @click="goTefWritingSpeakingPage">打开对应 PDF 页</button>
+      </div>
+    </div>
+  </section>
+
+  <section v-if="mode==='tcf'" class="wrap tef-shell">
+    <div class="tef-topbar">
+      <div class="tef-title">
+        <h2>TCF 在线逐题答题</h2>
+        <p>选择 TV5MONDE L01-L17 训练，逐题作答后自动批改并收集错题。</p>
+      </div>
+      <div class="tef-actions">
+        <button class="tef-muted" type="button" @click="showMistakes">回到错题本</button>
+      </div>
+    </div>
+
+    <div class="tcf-exam-layout">
+      <aside class="tcf-lesson-panel">
+        <button v-for="lesson in tcfLessons" :key="lesson.id" class="tcf-lesson-btn" :class="{active:tcfSelectedLesson===lesson.id}" type="button" @click="selectTcfLesson(lesson.id)">
+          {{ lesson.id }}
+          <span>{{ hasTcfData(lesson.id) ? '已接入题库' : '待录入题库' }}</span>
+          <span v-if="tcfLessonSummary(lesson.id)">{{ tcfLessonSummary(lesson.id) }}</span>
+        </button>
+      </aside>
+
+      <main class="tcf-exam-panel">
+        <div v-if="tcfLoading" class="loading"><div class="spin"></div>正在加载 TCF 题库...</div>
+        <div v-else-if="tcfLoadError" class="error">{{ tcfLoadError }}</div>
+        <template v-else-if="currentTcfPaper">
+          <div class="tcf-paper-head">
+            <div>
+              <h3>{{ currentTcfPaper.source }} {{ currentTcfPaper.livretNo }}</h3>
+              <p>{{ currentTcfQuestion ? currentTcfQuestion.sectionTitle + ' · ' + tcfSectionProgress(currentTcfQuestion) + ' · Q' + currentTcfQuestion.globalQuestionNumber + '/40' : '暂无题目' }}</p>
+            </div>
+            <div class="tcf-card-actions">
+              <a class="tef-muted" :href="tcfAssetPath(currentTcfPaper.pdfPath)" target="_blank" rel="noopener">查看原 PDF</a>
+              <button class="tef-danger" type="button" @click="resetTcfExam">重新练习</button>
+            </div>
+          </div>
+
+          <div v-if="currentTcfQuestion && currentTcfQuestion.sectionKey==='CO' && currentTcfPaper.audioPath" class="audio-box">
+            <b>套题音频</b>
+            <audio controls preload="none" :src="tcfAssetPath(currentTcfPaper.audioPath)"></audio>
+          </div>
+
+          <div v-if="!currentTcfQuestion" class="empty">这套题暂未录入结构化题目。</div>
+          <article v-else class="tcf-question-card">
+            <div class="answer-meta">
+              <span>{{ currentTcfQuestion.sectionTitle }}</span>
+              <span>{{ tcfSectionProgress(currentTcfQuestion) }}</span>
+              <span>Q{{ currentTcfQuestion.globalQuestionNumber }} / 40</span>
+              <span>已答 {{ tcfAnsweredCount }} / {{ currentTcfPaper.questions.length }}</span>
+              <span v-if="currentTcfQuestion.needsReview">需校对</span>
+            </div>
+            <p class="tcf-instruction">{{ currentTcfQuestion.instruction }}</p>
+            <div class="tef-progress"><i :style="{width:tcfProgressPercent + '%'}"></i></div>
+            <div class="tcf-question-layout" :class="{withImage:!!tcfQuestionImage(currentTcfQuestion)}">
+              <figure v-if="tcfQuestionImage(currentTcfQuestion)" class="tcf-document-figure" @click="lightbox=tcfQuestionImage(currentTcfQuestion)">
+                <img :src="tcfQuestionImage(currentTcfQuestion)" :alt="'TCF ' + currentTcfQuestion.id" />
+                <figcaption>点击放大材料图片</figcaption>
+              </figure>
+              <div class="tcf-question-main">
+                <h3>Q{{ currentTcfQuestion.questionNumber }}</h3>
+                <p v-if="currentTcfQuestion.documentText" class="tcf-document-text">{{ currentTcfQuestion.documentText }}</p>
+                <p class="tcf-prompt">{{ tcfQuestionText(currentTcfQuestion) || '请查看原题截图或原 PDF 作答。' }}</p>
+                <div class="tcf-online-options">
+                  <button v-for="(text, key) in currentTcfQuestion.options" :key="key" type="button" class="choice" :class="{selected:getTcfUserAnswer(currentTcfQuestion.id)===key}" @click="selectTcfOption(currentTcfQuestion.id, key)">
+                    <b>{{ key }}</b>
+                    <span v-if="text">{{ text }}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="tcf-nav-row">
+              <button class="tef-muted" type="button" @click="prevTcfQuestion" :disabled="tcfCurrentIndex===0">上一题</button>
+              <button class="tef-muted" type="button" @click="nextTcfQuestion" :disabled="tcfCurrentIndex>=currentTcfPaper.questions.length-1">下一题</button>
+              <button class="tef-primary" type="button" @click="submitTcfExam">提交整套试卷</button>
+            </div>
+          </article>
+
+          <section v-if="currentTcfScore" class="tcf-result-panel">
+            <div class="tcf-result-hero">
+              <div class="tcf-total-score">
+                <b>{{ currentTcfScore.correct }}</b><span>/{{ currentTcfScore.total }}</span>
+              </div>
+              <p>{{ currentTcfScore.answered }} / {{ currentTcfScore.total }} 已答 · {{ currentTcfScore.wrong }} 题错误</p>
+            </div>
+            <div class="tcf-section-results">
+              <article v-for="section in tcfSectionScores" :key="section.key" class="tcf-section-result-card">
+                <h3>{{ section.title }}</h3>
+                <p>{{ section.wrong ? section.wrong + ' réponses incorrectes' : 'Toutes vos réponses sont correctes' }}</p>
+                <div class="tcf-ring" :style="{ '--pct': section.percent }">
+                  <span>{{ section.percent }}%</span>
+                </div>
+                <small>{{ section.correct }} / {{ section.total }}</small>
+              </article>
+            </div>
+            <div class="tcf-recap">
+              <h3>Récapitulatif du test</h3>
+              <div class="tcf-recap-grid">
+                <span v-for="row in currentTcfScore.rows" :key="row.id" :class="{ok:row.userAnswer && row.isCorrect, wrong:row.userAnswer && row.isGradable && !row.isCorrect, unanswered:!row.userAnswer}">
+                  {{ row.questionNumber }}
+                </span>
+              </div>
+            </div>
+          </section>
+        </template>
+      </main>
+    </div>
+
+    <div v-if="false" class="tcf-grid">
+      <article v-for="lesson in tcfLessons" :key="lesson.id" class="tcf-card">
+        <div>
+          <h3>{{ lesson.id }}</h3>
+          <p>TV5MONDE 官方训练 · {{ lesson.pdfName }}</p>
+        </div>
+        <div class="tcf-card-actions">
+          <a class="tef-primary" :href="lesson.pdfPath" target="_blank" rel="noopener">查看 PDF</a>
+          <button class="tef-muted" type="button" @click="toggleTcfForm(lesson.id)">添加错题</button>
+        </div>
+        <audio controls preload="none" :src="lesson.audioPath"></audio>
+        <form v-if="tcfFormOpen===lesson.id" class="tcf-form" @submit.prevent="saveTcfWrong(lesson)">
+          <label>题号
+            <input v-model.trim="tcfDraft.questionNumber" type="text" placeholder="例如 12" required />
+          </label>
+          <label>板块
+            <select v-model="tcfDraft.section">
+              <option v-for="section in tcfSections" :key="section" :value="section">{{ section }}</option>
+            </select>
+          </label>
+          <label>错题标题
+            <input v-model.trim="tcfDraft.title" type="text" placeholder="留空则自动生成" />
+          </label>
+          <label>文本 / 题干
+            <textarea v-model.trim="tcfDraft.text" placeholder="可粘贴题干、选项或听力笔记"></textarea>
+          </label>
+          <label>题型错因
+            <textarea v-model.trim="tcfDraft.errorReason" placeholder="例如：同义替换没识别"></textarea>
+          </label>
+          <div class="tcf-card-actions">
+            <button class="tef-primary" type="submit">保存到错题本</button>
+            <button class="tef-muted" type="button" @click="toggleTcfForm('')">取消</button>
+          </div>
+        </form>
+      </article>
+    </div>
+  </section>
 
   <div v-if="lightbox" class="lightbox" @click="lightbox=null">
     <button class="x" @click="lightbox=null">&times;</button>
@@ -369,6 +803,9 @@ const masteryStatuses = ['未复习','不稳定','基本掌握','已掌握','需
 const reviewResults = ['仍然错','不太稳','基本会了','完全掌握'];
 const reviewResultMap = {'仍然错':'需要重做','不太稳':'不稳定','基本会了':'基本掌握','完全掌握':'已掌握'};
 const reviewDelayMap = {'仍然错':1,'不太稳':3,'基本会了':7,'完全掌握':14};
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('tcf-static-sw.js').catch(() => {});
+}
 const reviewTemplates = {
   '动词辨析':['找出两个容易混淆的动词。','分别写出它们的核心方向或语义差别。','回到原句判断动作方向。','写出错误选项为什么不符合语境。','用这两个动词各造一个短句。'],
   '代词':['找被替代的原名词或结构。','判断它是 de + 名词、à + 人、直接宾语、间接宾语还是地点。','对应选择 en / y / le / la / les / lui / leur。','检查代词位置。','写出错误选项为什么不能用。'],
@@ -379,6 +816,164 @@ const reviewTemplates = {
   '推理判断题':['标出题目要求推断的对象。','找到原文依据。','判断选项是否超出原文。','排除过度推断项。','总结“只能根据原文推出，不能脑补”。'],
   '词义猜测题':['找目标词前后句。','判断上下文中的转折、因果、解释或举例关系。','判断词义方向。','把选项代入原句检查是否通顺。','总结上下文推词规则。'],
   '通用':['重做本题。','写出错误原因。','写出正确规则。','写出一个同类例子。','安排下一次复习。']
+};
+
+const TEF_PDF_URL = 'public/source-pdfs/tef/TEF_test_blanc.pdf';
+const TEF_TRANSCRIPTION_PDF_URL = 'public/source-pdfs/tef/TEF_transcriptions-corriges.pdf';
+const tefAnswerObject = answers => answers.reduce((acc, answer, index) => {
+  acc[index + 1] = String(answer).toUpperCase();
+  return acc;
+}, {});
+const TEF_ANSWER_KEYS = {
+  CE: tefAnswerObject(['c','c','c','d','a','d','a','b','c','c','a','d','c','d','d','c','d','d','c','a','d','b','a','c','c','b','b','d','d','c','d','a','d','b','a','d','a','b','b','d']),
+  CO: tefAnswerObject(['d','b','d','c','b','b','a','c','d','c','b','b','c','d','b','c','a','c','d','a','c','a','a','c','d','a','a','b','b','a','a','a','b','b','b','c','b','c','c','b']),
+  LS: tefAnswerObject(['c','c','d','d','b','d','c','b','c','c','a','c','a','a','c','a','c','b','d','a','c','d','b','c','b','c','a','a','b','c','c','c','d','a','b','a','a','d','a','a'])
+};
+const TEF_SECTIONS = [
+  { id:'CE', short:'CE', name:'阅读理解', note:'40 题客观题' },
+  { id:'CO', short:'CO', name:'听力理解', note:'40 题，含音频' },
+  { id:'LS', short:'LS', name:'词汇与结构', note:'40 题客观题' },
+  { id:'EE', short:'写作', name:'Expression écrite', note:'展示页' },
+  { id:'EO', short:'口语', name:'Expression orale', note:'展示页' }
+];
+const TEF_OBJECTIVE_SECTIONS = ['CE','CO','LS'];
+const TEF_QUESTION_TYPES = {
+  CE: [
+    [1,7,'Documents divers'], [8,13,'Phrases lacunaires'], [14,17,'Textes lacunaires'],
+    [18,21,'Lecture rapide de textes'], [22,22,'Lecture rapide de graphiques'],
+    [23,32,'Documents administratifs et professionnels'], [33,40,'Articles de presse']
+  ],
+  CO: [
+    [1,4,'Conversations avec dessins'], [5,8,'Annonces publiques'],
+    [9,14,'Messages sur répondeur téléphonique'], [15,20,'Micro-trottoirs'],
+    [21,22,'Chroniques'], [23,28,'Interviews'], [29,30,'Reportage RFI'],
+    [31,40,'Documents divers']
+  ],
+  LS: [
+    [1,14,'Phrases lacunaires de lexique'], [15,20,'Textes lacunaires de lexique'],
+    [21,34,'Phrases lacunaires de syntaxe'], [35,40,'Textes lacunaires de cohésion']
+  ]
+};
+const TEF_PAGE_RANGES = {
+  CE: [[1,7,1,3],[8,13,4,4],[14,17,5,5],[18,21,6,7],[22,22,8,8],[23,32,9,13],[33,40,14,17]],
+  CO: [[1,4,18,19],[5,14,20,21],[15,20,22,23],[21,30,23,24],[31,40,25,26]],
+  LS: [[1,14,27,29],[15,20,29,30],[21,34,31,32],[35,40,33,34]],
+  EE: [[1,1,35,35]],
+  EO: [[1,1,36,36]]
+};
+const CO_AUDIO_MAP = Object.freeze({
+  1:'public/audio/tef/TEF_Piste057.mp3', 2:'public/audio/tef/TEF_Piste058.mp3',
+  3:'public/audio/tef/TEF_Piste059.mp3', 4:'public/audio/tef/TEF_Piste060.mp3',
+  5:'public/audio/tef/TEF_Piste061.mp3', 6:'public/audio/tef/TEF_Piste062.mp3',
+  7:'public/audio/tef/TEF_Piste063.mp3', 8:'public/audio/tef/TEF_Piste064.mp3',
+  9:'public/audio/tef/TEF_Piste065.mp3', 10:'public/audio/tef/TEF_Piste066.mp3',
+  11:'public/audio/tef/TEF_Piste067.mp3', 12:'public/audio/tef/TEF_Piste068.mp3',
+  13:'public/audio/tef/TEF_Piste069.mp3', 14:'public/audio/tef/TEF_Piste070.mp3',
+  15:'public/audio/tef/TEF_Piste072.mp3', 16:'public/audio/tef/TEF_Piste073.mp3',
+  17:'public/audio/tef/TEF_Piste074.mp3', 18:'public/audio/tef/TEF_Piste076.mp3',
+  19:'public/audio/tef/TEF_Piste077.mp3', 20:'public/audio/tef/TEF_Piste078.mp3',
+  21:'public/audio/tef/TEF_Piste079.mp3', 22:'public/audio/tef/TEF_Piste080.mp3',
+  23:'public/audio/tef/TEF_Piste081.mp3', 24:'public/audio/tef/TEF_Piste081.mp3',
+  25:'public/audio/tef/TEF_Piste082.mp3', 26:'public/audio/tef/TEF_Piste082.mp3',
+  27:'public/audio/tef/TEF_Piste083.mp3', 28:'public/audio/tef/TEF_Piste083.mp3',
+  29:'public/audio/tef/TEF_Piste084.mp3', 30:'public/audio/tef/TEF_Piste084.mp3',
+  31:'public/audio/tef/TEF_Piste085.mp3', 32:'public/audio/tef/TEF_Piste086.mp3',
+  33:'public/audio/tef/TEF_Piste087.mp3', 34:'public/audio/tef/TEF_Piste088.mp3',
+  35:'public/audio/tef/TEF_Piste089.mp3', 36:'public/audio/tef/TEF_Piste090.mp3',
+  37:'public/audio/tef/TEF_Piste091.mp3', 38:'public/audio/tef/TEF_Piste092.mp3',
+  39:'public/audio/tef/TEF_Piste093.mp3', 40:'public/audio/tef/TEF_Piste094.mp3'
+});
+const tefAnswersKey = 'tefMockAnswers';
+const tefScoresKey = 'tefMockScores';
+const tefWrongKey = 'tefWrongQuestions';
+const tcfWrongKey = 'tcfTv5WrongQuestions';
+const tcfExamAnswersKey = 'tcfTv5ExamAnswers';
+const tcfExamScoresKey = 'tcfTv5ExamScores';
+const wrongClearVersionKey = 'wrongQuestionsClearedVersion';
+const wrongClearVersion = '20260603-clear-imported-wrong-questions';
+if (localStorage.getItem(wrongClearVersionKey) !== wrongClearVersion) {
+  localStorage.removeItem(tefWrongKey);
+  localStorage.removeItem(tcfWrongKey);
+  localStorage.removeItem(progressKey);
+  localStorage.setItem(wrongClearVersionKey, wrongClearVersion);
+}
+const TCF_DATA_VERSION = '20260602-tv5monde-co-sl-ce-answers-summary';
+const tefChoices = ['A','B','C','D'];
+const tefQuestionNumbers = Array.from({length:40},(_,i)=>i+1);
+const TCF_SECTIONS = [
+  'Compréhension orale / 听力',
+  'Compréhension écrite / 阅读',
+  'Structures de la langue / 语法结构'
+];
+const TCF_LESSONS = Array.from({ length: 17 }, (_, index) => {
+  const num = index + 1;
+  const id = `L${String(num).padStart(2,'0')}`;
+  return {
+    id,
+    source: 'TV5MONDE 官方训练',
+    pdfName: `TCF_TV5_${id}_livret.pdf`,
+    audioName: `tcf${num}-podcast.mp3`,
+    pdfPath: `/public/tcf-tv5monde/${id}/TCF_TV5_${id}_livret.pdf`,
+    audioPath: `/public/tcf-tv5monde/${id}/tcf${num}-podcast.mp3`
+  };
+});
+const TCF_CHOICE_KEYS = ['A','B','C','D'];
+const TCF_SECTION_DEFS = [
+  {
+    sectionKey: 'CO',
+    sectionTitle: 'COMPRÉHENSION ORALE',
+    instruction: 'Écoutez les documents. Pour chaque question, choisissez la bonne réponse.',
+    count: 15,
+    start: 1,
+    section: 'Compréhension orale',
+    subType: '听力理解'
+  },
+  {
+    sectionKey: 'SL',
+    sectionTitle: 'STRUCTURE DE LA LANGUE',
+    instruction: 'Choisissez la bonne réponse et cliquez sur le bouton correspondant.',
+    count: 10,
+    start: 16,
+    section: 'Structure de la langue',
+    subType: '语法结构'
+  },
+  {
+    sectionKey: 'CE',
+    sectionTitle: 'COMPRÉHENSION ÉCRITE',
+    instruction: 'Lisez les documents. Pour chaque question, choisissez la bonne réponse.',
+    count: 15,
+    start: 26,
+    section: 'Compréhension écrite',
+    subType: '阅读理解'
+  }
+];
+const TCF_TOTAL_QUESTIONS = TCF_SECTION_DEFS.reduce((sum, section) => sum + section.count, 0);
+const tcfDataUrl = lessonId => `data/tcf-tv5monde/${lessonId}.json?v=${TCF_DATA_VERSION}`;
+const tcfSectionMeta = qno => TCF_SECTION_DEFS.find(section => qno >= section.start && qno < section.start + section.count) || TCF_SECTION_DEFS[0];
+const getTefRangeValue = (section, qno, list) => {
+  const ranges = list[section] || [];
+  const found = ranges.find(([start,end]) => qno >= start && qno <= end);
+  return found || ranges[0];
+};
+const getTefQuestionType = (section, qno) => {
+  const found = getTefRangeValue(section, qno, TEF_QUESTION_TYPES);
+  return found ? found[2] : '';
+};
+const getTefPdfRange = (section, qno = 1) => {
+  const found = getTefRangeValue(section, qno, TEF_PAGE_RANGES);
+  return found ? { start: found[2], end: found[3] } : { start: 1, end: 1 };
+};
+const tefLevelFromCorrect = correct => {
+  if(correct <= 6) return 'A1';
+  if(correct <= 15) return 'A2';
+  if(correct <= 21) return 'B1';
+  if(correct <= 28) return 'B2';
+  if(correct <= 35) return 'C1';
+  return 'C2';
+};
+const safeJsonParse = (value, fallback) => {
+  try { return JSON.parse(value || ''); }
+  catch { return fallback; }
 };
 
 const pad = n => String(n).padStart(2,'0');
@@ -431,12 +1026,94 @@ function inferMicroType(item){
   return (m ? m[1] : source) || '未细分';
 }
 
+function tcfSectionToCategory(section){
+  if(String(section).includes('orale')) return '听力';
+  if(String(section).includes('Structures')) return '语法结构';
+  return '阅读';
+}
+
+function lessonAudioPath(lessonId){
+  const num = Number(String(lessonId).replace(/\D/g,''));
+  return `/public/tcf-tv5monde/${lessonId}/tcf${num}-podcast.mp3`;
+}
+
+function tcfWrongToQuestion(item){
+  const lessonId = item.lessonId || item.lesson || 'L01';
+  const qno = item.questionNumber || item.qno || '';
+  const section = item.section || TCF_SECTIONS[0];
+  const imagePath = item.materialImage || item.questionImage || item.documentImage || item.screenshot || '';
+  return {
+    id: item.id || `tcf-tv5-${lessonId.toLowerCase()}-q${String(qno || Date.now()).padStart(2,'0')}`,
+    exam_type: 'TCF',
+    source: item.source || 'TV5MONDE 官方训练',
+      lessonId,
+      questionNumber: qno,
+      main_category: tcfSectionToCategory(section),
+      sub_type: section,
+      questionType: item.questionType || item.errorType || section,
+      microType: lessonId,
+      image_path: imagePath,
+    audio_path: item.audioPath || (String(section).includes('orale') ? lessonAudioPath(lessonId) : ''),
+    original_text: item.questionText || item.text || item.original_text || '请查看原题截图或原 PDF 作答。',
+    correct_answer: item.correctAnswer || '',
+    myAnswer: item.userAnswer || item.myAnswer || '',
+    analysis: item.analysis || '',
+    key_point: item.errorPoint || item.errorType || section,
+    error_reason: item.errorReason || item.wrongReason || '',
+      translation: item.translation || '',
+      trap: item.trap || '',
+      transferableRule: item.transferableRule || '',
+    reviewAction: item.review || '',
+    masteryStatus: item.masteryStatus || '未掌握',
+    reviewCount: Number(item.reviewCount || 0),
+    nextReviewDate: item.lastReviewDate || item.reviewDate || item.nextReviewDate || '',
+    lastReviewedAt: item.lastReviewedAt || item.lastReviewDate || '',
+    reviewHistory: item.reviewHistory || []
+  };
+}
+
+function tefWrongToQuestion(item){
+  const section = item.section || item.block || 'TEF';
+  return {
+    id: item.id || `tef-${section.toLowerCase()}-q${item.questionNumber || Date.now()}`,
+    exam_type: 'TEF',
+    source: item.sourceExam || item.source || 'TEF 模拟卷',
+    lessonId: item.mockPaper || 'TEF_test_blanc',
+    questionNumber: item.questionNumber || '',
+    main_category: section === 'CO' ? '听力' : (section === 'LS' ? '语法' : '阅读'),
+    sub_type: section,
+    questionType: item.questionType || section,
+    microType: item.pdfPageRange ? `PDF ${item.pdfPageRange}` : section,
+    image_path: '',
+    audio_path: item.audioUrl || '',
+    original_text: item.title || `TEF ${section} Q${item.questionNumber || '?'}`,
+    correct_answer: item.correctAnswer || '',
+    analysis: item.analysis || '',
+    key_point: item.errorPoint || item.questionType || section,
+    error_reason: item.wrongReason || '',
+    masteryStatus: item.masteryStatus || '未掌握',
+    reviewCount: Number(item.reviewCount || 0),
+    nextReviewDate: item.lastReviewDate || '',
+    reviewHistory: item.reviewHistory || []
+  };
+}
+
+function loadLocalWrongQuestions(){
+  const tcf = safeJsonParse(localStorage.getItem(tcfWrongKey), []);
+  const tef = safeJsonParse(localStorage.getItem(tefWrongKey), []);
+  return [
+    ...(Array.isArray(tef) ? tef.map(tefWrongToQuestion) : []),
+    ...(Array.isArray(tcf) ? tcf.map(tcfWrongToQuestion) : [])
+  ];
+}
+
 function normalizeQuestion(item, progress){
   const p = progress[progressId(item)] || {};
   const reviewHistory = Array.isArray(p.reviewHistory) ? p.reviewHistory : (Array.isArray(item.reviewHistory) ? item.reviewHistory : []);
   return {
     ...item,
     exam_type: item.exam_type || item.examType || item.exam || '',
+    source: item.source || item.sourceExam || item.origin || '原始错题',
     main_category: item.main_category || item.section || item.type || item.category || '',
     questionType: item.questionType || inferQuestionType(item),
     microType: item.microType || inferMicroType(item),
@@ -457,8 +1134,9 @@ createApp({
     const error = ref(false);
     const examTab = ref('全部');
     const examTabs = ['全部','TCF','TEF'];
+    const sourceTab = ref('全部');
     const categoryTab = ref('全部');
-    const categoryTabs = ['全部','语法','阅读'];
+    const categoryTabs = ['全部','语法','语法结构','阅读','听力'];
     const questionTypeTab = ref('全部');
     const masteryTab = ref('全部');
     const masteryTabs = ['全部',...masteryStatuses];
@@ -472,13 +1150,42 @@ createApp({
     const overflowing = ref(new Set());
     const stemEls = {};
     const lightbox = ref(null);
+    const mode = ref('mistakes');
+    const tefSection = ref('CE');
+    const tefCurrentIndex = ref(0);
+    const tefAnswers = ref(safeJsonParse(localStorage.getItem(tefAnswersKey), { CE:{}, CO:{}, LS:{} }) || { CE:{}, CO:{}, LS:{} });
+    const tefScores = ref(safeJsonParse(localStorage.getItem(tefScoresKey), {}) || {});
+    const tefWrongList = ref(safeJsonParse(localStorage.getItem(tefWrongKey), []) || []);
+    const tcfWrongList = ref(safeJsonParse(localStorage.getItem(tcfWrongKey), []) || []);
+    const tcfFormOpen = ref('');
+    const tcfDraft = ref({ questionNumber:'', section:TCF_SECTIONS[0], title:'', text:'', errorReason:'' });
+    const tcfSelectedLesson = ref('L01');
+    const tcfPapers = ref({});
+    const tcfCatalog = ref({});
+    const tcfLoading = ref(false);
+    const tcfLoadError = ref('');
+    const tcfCurrentIndex = ref(0);
+    const tcfExamAnswers = ref(safeJsonParse(localStorage.getItem(tcfExamAnswersKey), {}) || {});
+    const tcfExamScores = ref(safeJsonParse(localStorage.getItem(tcfExamScoresKey), {}) || {});
+    const audioMissing = ref({});
+    const pdfCanvas = ref(null);
+    const pdfPageNum = ref(1);
+    const pdfJumpPage = ref(1);
+    const pdfPageCount = ref(0);
+    const pdfScale = ref(1.18);
+    const pdfLoading = ref(false);
+    const pdfError = ref('');
+    let pdfDoc = null;
+    let pdfRenderTask = null;
 
     const loadProgress = () => {
       try { progress.value = JSON.parse(localStorage.getItem(progressKey) || '{}') || {}; }
       catch { progress.value = {}; }
     };
     const saveProgress = () => localStorage.setItem(progressKey, JSON.stringify(progress.value));
-    const refreshItems = raw => { items.value = raw.map(item => normalizeQuestion(item, progress.value)); };
+    const refreshItems = raw => {
+      items.value = [...raw, ...loadLocalWrongQuestions()].map(item => normalizeQuestion(item, progress.value));
+    };
 
     loadProgress();
     fetch('data.json')
@@ -492,6 +1199,631 @@ createApp({
     const formatLastReviewed = item => item.lastReviewedAt || '尚未复习';
     const formatNextReview = item => item.nextReviewDate ? (isDue(item) ? '今日待复习' : item.nextReviewDate) : '未安排';
     const statusClass = status => `b-status-${status || '未复习'}`;
+    const tefSections = TEF_SECTIONS;
+    const tefObjectiveSections = TEF_OBJECTIVE_SECTIONS;
+    const coAudioMap = CO_AUDIO_MAP;
+    const currentTefTitle = computed(() => {
+      const section = tefSections.find(s => s.id === tefSection.value);
+      return section ? `${section.short} ${section.name}` : 'TEF 模拟卷';
+    });
+    const currentTefSectionNote = computed(() => {
+      const firstRange = TEF_QUESTION_TYPES[tefSection.value]?.[0];
+      return firstRange ? firstRange[2] : '展示页';
+    });
+    const isTefSubmitted = computed(() => !!tefScores.value[tefSection.value]);
+    const currentTefAnswers = computed(() => tefAnswers.value[tefSection.value] || {});
+    const tefAnsweredCount = computed(() => Object.values(currentTefAnswers.value).filter(Boolean).length);
+    const currentTefScore = computed(() => {
+      const score = tefScores.value[tefSection.value] || null;
+      if(!score) return null;
+      const rows = Array.isArray(score.rows) && score.rows.length === 40
+        ? score.rows
+        : tefQuestionNumbers.map(qno => ({
+            qno,
+            myAnswer: currentTefAnswers.value[qno] || '',
+            correctAnswer: TEF_ANSWER_KEYS[tefSection.value]?.[qno] || ''
+          }));
+      const correct = score.correct ?? rows.filter(row => row.myAnswer && row.myAnswer === row.correctAnswer).length;
+      const total = score.total || 40;
+      return {
+        ...score,
+        total,
+        answered: score.answered ?? rows.filter(row => row.myAnswer).length,
+        correct,
+        wrong: score.wrong ?? rows.filter(row => row.myAnswer && row.myAnswer !== row.correctAnswer).length,
+        unanswered: score.unanswered ?? rows.filter(row => !row.myAnswer).length,
+        rateRounded: score.rateRounded ?? Math.round((correct / total) * 100),
+        rows
+      };
+    });
+    const currentTefQuestionNo = computed(() => tefCurrentIndex.value + 1);
+    const currentTefQuestionType = computed(() => getTefQuestionType(tefSection.value, currentTefQuestionNo.value));
+    const tefSectionLabel = computed(() => {
+      const section = tefSections.find(row => row.id === tefSection.value);
+      return section ? section.name : 'TEF';
+    });
+    const tefQuestionGroups = computed(() => [0,10,20,30].map(start => {
+      const questions = tefQuestionNumbers.slice(start,start+10);
+      return { label: `Q${questions[0]} - Q${questions[questions.length - 1]}`, questions };
+    }));
+    const sourceOptions = computed(() => {
+      const sources = Array.from(new Set(items.value.map(item => item.source || '原始错题'))).sort();
+      return ['全部', ...sources];
+    });
+
+    const saveTefAnswers = () => localStorage.setItem(tefAnswersKey, JSON.stringify(tefAnswers.value));
+    const saveTefScores = () => localStorage.setItem(tefScoresKey, JSON.stringify(tefScores.value));
+    const saveTefWrongList = () => localStorage.setItem(tefWrongKey, JSON.stringify(tefWrongList.value));
+    const saveTcfWrongList = () => localStorage.setItem(tcfWrongKey, JSON.stringify(tcfWrongList.value));
+    const showMistakes = () => { mode.value = 'mistakes'; };
+    const showTcf = () => {
+      mode.value = 'tcf';
+      loadTcfCatalog();
+      loadTcfPaper(tcfSelectedLesson.value);
+    };
+    const showTef = () => {
+      mode.value = 'tef';
+      nextTick(() => {
+        const page = getTefPdfRange(tefSection.value, 1).start;
+        setPdfPage(page);
+      });
+    };
+    const tcfLessons = TCF_LESSONS;
+    const tcfSections = TCF_SECTIONS;
+    const resetTcfDraft = () => {
+      tcfDraft.value = { questionNumber:'', section:TCF_SECTIONS[0], title:'', text:'', errorReason:'' };
+    };
+    const toggleTcfForm = lessonId => {
+      tcfFormOpen.value = tcfFormOpen.value === lessonId ? '' : lessonId;
+      if(lessonId) resetTcfDraft();
+    };
+    const saveTcfWrong = lesson => {
+      const qno = String(tcfDraft.value.questionNumber || '').trim();
+      if(!qno) return;
+      const id = `tcf-tv5-${lesson.id.toLowerCase()}-q${qno}`;
+      const existing = tcfWrongList.value.find(item => item.id === id);
+      const item = {
+        ...(existing || {}),
+        id,
+        title: tcfDraft.value.title || `TCF ${lesson.id} Q${qno}`,
+        examType: 'TCF',
+        source: lesson.source,
+        lessonId: lesson.id,
+        questionNumber: qno,
+        section: tcfDraft.value.section,
+        screenshot: existing?.screenshot || '',
+        text: tcfDraft.value.text || existing?.text || '',
+        errorType: tcfDraft.value.section,
+        errorReason: tcfDraft.value.errorReason || existing?.errorReason || '',
+        translation: existing?.translation || '',
+        analysis: existing?.analysis || '',
+        errorPoint: existing?.errorPoint || '',
+        transferableRule: existing?.transferableRule || '',
+        review: existing?.review || '',
+        masteryStatus: existing?.masteryStatus || '未掌握',
+        reviewDate: existing?.reviewDate || '',
+        reviewCount: Number(existing?.reviewCount || 0),
+        pdfPath: lesson.pdfPath,
+        audioPath: lesson.audioPath,
+        updatedAt: new Date().toISOString()
+      };
+      const byId = new Map(tcfWrongList.value.map(row => [row.id,row]));
+      byId.set(id,item);
+      tcfWrongList.value = Array.from(byId.values());
+      saveTcfWrongList();
+      refreshItems(items.value.filter(row => !String(row.id || '').startsWith('tcf-tv5-') && !String(row.id || '').startsWith('tef-')));
+      tcfFormOpen.value = '';
+      showMistakes();
+    };
+    const saveTcfExamAnswers = () => localStorage.setItem(tcfExamAnswersKey, JSON.stringify(tcfExamAnswers.value));
+    const saveTcfExamScores = () => localStorage.setItem(tcfExamScoresKey, JSON.stringify(tcfExamScores.value));
+    const tcfAssetPath = path => {
+      const value = String(path || '').trim();
+      if(value.startsWith('/tcf-tv5monde/')) return `/public${value}`;
+      return value;
+    };
+    const getTcfLesson = lessonId => TCF_LESSONS.find(lesson => lesson.id === lessonId) || TCF_LESSONS[0];
+    const tcfQuestionText = question => String(question?.questionText ?? question?.prompt ?? '').trim();
+    const tcfQuestionImage = question => tcfAssetPath(question?.materialImage || question?.documentImage || question?.questionImage || '');
+    const normalizeTcfOptions = options => TCF_CHOICE_KEYS.reduce((acc, key, index) => {
+      let value = '';
+      if(Array.isArray(options)){
+        const entry = options[index];
+        if(typeof entry === 'string') value = entry;
+        else if(entry && typeof entry === 'object') value = entry.text || entry.label || entry.value || '';
+      } else if(options && typeof options === 'object') {
+        value = options[key] ?? options[key.toLowerCase()] ?? '';
+      }
+      acc[key] = String(value || '').trim();
+      return acc;
+    }, {});
+    const normalizeTcfCorrectAnswer = answer => {
+      const normalized = String(answer || '').trim().toUpperCase();
+      return TCF_CHOICE_KEYS.includes(normalized) ? normalized : '';
+    };
+    const normalizeTcfQuestion = (paper, rawQuestion, questionNo) => {
+      const lessonId = paper.livretNo || tcfSelectedLesson.value;
+      const lesson = getTcfLesson(lessonId);
+      const question = rawQuestion && typeof rawQuestion === 'object' ? rawQuestion : {};
+      const isExistingQuestion = !!rawQuestion;
+      const resolvedNo = Number(question.globalQuestionNumber || question.questionNumber || question.questionNo || questionNo);
+      const qno = Number.isFinite(resolvedNo) && resolvedNo > 0 ? resolvedNo : questionNo;
+      const sectionMeta = tcfSectionMeta(qno);
+      const sectionQuestionNumber = qno - sectionMeta.start + 1;
+      const questionText = tcfQuestionText(question);
+      const sourcePdf = tcfAssetPath(question.sourcePdf || question.pdfPath || paper.pdfPath || lesson.pdfPath || '');
+      const questionImage = tcfAssetPath(question.questionImage || '');
+      const materialImage = tcfAssetPath(question.materialImage || question.documentImage || '');
+      const correctAnswer = normalizeTcfCorrectAnswer(question.correctAnswer);
+      const options = normalizeTcfOptions(question.options);
+      const hasOptionText = Object.values(options).some(Boolean);
+      const normalized = {
+        ...(isExistingQuestion ? question : {}),
+        lesson: question.lesson || lessonId,
+        globalQuestionNumber: qno,
+        questionNumber: qno,
+        questionNo: qno,
+        id: question.id || `TCF_TV5_${lessonId}_Q${String(qno).padStart(2,'0')}`,
+        sectionKey: sectionMeta.sectionKey,
+        sectionTitle: sectionMeta.sectionTitle,
+        instruction: sectionMeta.instruction,
+        sectionQuestionNumber,
+        sectionQuestionCount: sectionMeta.count,
+        section: sectionMeta.section,
+        subType: sectionMeta.subType,
+        questionText,
+        prompt: questionText,
+        options,
+        correctAnswer,
+        documentText: String(question.documentText || '').trim(),
+        sourcePdf,
+        questionImage,
+        materialImage,
+        audio: sectionMeta.sectionKey === 'CO' ? tcfAssetPath(question.audio || question.audioPath || paper.audioPath || lesson.audioPath || '') : '',
+        audioPath: sectionMeta.sectionKey === 'CO' ? tcfAssetPath(question.audioPath || question.audio || paper.audioPath || lesson.audioPath || '') : '',
+        needsReview: question.needsReview ?? (!questionText || !hasOptionText || !correctAnswer)
+      };
+      if(isExistingQuestion){
+        normalized.documentImage = question.documentImage || materialImage || questionImage;
+      }
+      return normalized;
+    };
+    const normalizeTcfPaper = (paper, lessonId) => {
+      const lesson = getTcfLesson(lessonId || paper?.livretNo || tcfSelectedLesson.value);
+      const basePaper = paper && typeof paper === 'object' ? paper : {};
+      const resolvedLessonId = basePaper.livretNo || lesson.id;
+      const byNumber = new Map();
+      (Array.isArray(basePaper.questions) ? basePaper.questions : []).forEach(question => {
+        const qno = Number(question?.questionNumber || question?.questionNo);
+        if(Number.isFinite(qno) && qno >= 1 && qno <= 40 && !byNumber.has(qno)) byNumber.set(qno, question);
+      });
+      return {
+        ...basePaper,
+        source: basePaper.source || 'TV5MONDE',
+        livretNo: resolvedLessonId,
+        title: basePaper.title || `TV5MONDE TCF ${resolvedLessonId}`,
+        pdfPath: tcfAssetPath(basePaper.pdfPath || lesson.pdfPath),
+        audioPath: tcfAssetPath(basePaper.audioPath || lesson.audioPath),
+        sections: Array.isArray(basePaper.sections) ? basePaper.sections : TCF_SECTION_DEFS,
+        questions: Array.from({length:TCF_TOTAL_QUESTIONS}, (_, index) => normalizeTcfQuestion({
+          ...basePaper,
+          livretNo: resolvedLessonId,
+          pdfPath: tcfAssetPath(basePaper.pdfPath || lesson.pdfPath),
+          audioPath: tcfAssetPath(basePaper.audioPath || lesson.audioPath)
+        }, byNumber.get(index + 1), index + 1))
+      };
+    };
+    const summarizeTcfPaper = paper => {
+      const questions = Array.isArray(paper?.questions) ? paper.questions : [];
+      return {
+        total: TCF_TOTAL_QUESTIONS,
+        oral: TCF_SECTION_DEFS.find(section => section.sectionKey === 'CO')?.count || 15,
+        reading: TCF_SECTION_DEFS.find(section => section.sectionKey === 'CE')?.count || 15,
+        structure: TCF_SECTION_DEFS.find(section => section.sectionKey === 'SL')?.count || 10,
+        needsReview: questions.some(q => q.needsReview)
+      };
+    };
+    const hasTcfData = lessonId => !!tcfCatalog.value[lessonId] || !!tcfPapers.value[lessonId];
+    const tcfLessonSummary = lessonId => {
+      const summary = tcfCatalog.value[lessonId] || (tcfPapers.value[lessonId] ? summarizeTcfPaper(tcfPapers.value[lessonId]) : null);
+      if(!summary) return '';
+      const flags = [];
+      flags.push(`${summary.total}题`);
+      flags.push(`听${summary.oral}`);
+      flags.push(`语${summary.structure}`);
+      flags.push(`读${summary.reading}`);
+      if(summary.needsReview) flags.push('需校对');
+      return flags.join(' - ');
+    };
+    const loadTcfCatalog = async () => {
+      const entries = await Promise.all(TCF_LESSONS.map(async lesson => {
+        if(tcfCatalog.value[lesson.id]) return [lesson.id, tcfCatalog.value[lesson.id]];
+        try {
+          const response = await fetch(tcfDataUrl(lesson.id), { cache: 'no-store' });
+          if(!response.ok) return [lesson.id, null];
+          const paper = normalizeTcfPaper(await response.json(), lesson.id);
+          tcfPapers.value = { ...tcfPapers.value, [lesson.id]: paper };
+          return [lesson.id, summarizeTcfPaper(paper)];
+        } catch {
+          return [lesson.id, null];
+        }
+      }));
+      tcfCatalog.value = entries.reduce((acc, [lessonId, summary]) => {
+        if(summary) acc[lessonId] = summary;
+        return acc;
+      }, {});
+    };
+    const currentTcfPaper = computed(() => tcfPapers.value[tcfSelectedLesson.value] || null);
+    const currentTcfQuestion = computed(() => currentTcfPaper.value?.questions?.[tcfCurrentIndex.value] || null);
+    const currentTcfAnswers = computed(() => tcfExamAnswers.value[tcfSelectedLesson.value] || {});
+    const currentTcfScore = computed(() => {
+      const score = tcfExamScores.value[tcfSelectedLesson.value] || null;
+      if(!score || !Array.isArray(score.rows) || score.rows.length !== 40) return null;
+      const rows = score.rows.map((row, index) => {
+        const correctAnswer = normalizeTcfCorrectAnswer(row.correctAnswer);
+        const userAnswer = row.userAnswer || '';
+        return {
+          ...row,
+          questionNumber: row.questionNumber || row.questionNo || index + 1,
+          correctAnswer,
+          userAnswer,
+          isGradable: !!correctAnswer,
+          isCorrect: !!correctAnswer && !!userAnswer && userAnswer === correctAnswer
+        };
+      });
+      return {
+        ...score,
+        total: 40,
+        answered: score.answered ?? rows.filter(row => !!row.userAnswer).length,
+        gradable: score.gradable ?? rows.filter(row => row.isGradable).length,
+        correct: score.correct ?? rows.filter(row => row.isCorrect).length,
+        wrong: score.wrong ?? rows.filter(row => row.isGradable && !!row.userAnswer && row.userAnswer !== row.correctAnswer).length,
+        noAnswer: score.noAnswer ?? rows.filter(row => !row.isGradable).length,
+        rows
+      };
+    });
+    const tcfAnsweredCount = computed(() => (currentTcfPaper.value?.questions || []).filter(question => !!currentTcfAnswers.value[question.id]).length);
+    const tcfSectionScores = computed(() => {
+      const rows = currentTcfScore.value?.rows || [];
+      const sections = [
+        { key: 'CO', title: 'Compréhension orale' },
+        { key: 'SL', title: 'Structure de la langue' },
+        { key: 'CE', title: 'Compréhension écrite' }
+      ];
+      return sections.map(section => {
+        const sectionRows = rows.filter(row => row.sectionKey === section.key);
+        const total = sectionRows.length || 0;
+        const answered = sectionRows.filter(row => !!row.userAnswer).length;
+        const correct = sectionRows.filter(row => row.userAnswer && row.isCorrect).length;
+        const wrong = sectionRows.filter(row => row.userAnswer && row.isGradable && !row.isCorrect).length;
+        const percent = total ? Math.round((correct / total) * 100) : 0;
+        return { ...section, total, answered, correct, wrong, percent };
+      });
+    });
+    const tcfProgressPercent = computed(() => {
+      const total = currentTcfPaper.value?.questions?.length || 1;
+      return Math.round((tcfAnsweredCount.value / total) * 100);
+    });
+    const tcfSectionProgress = question => {
+      const current = String(question?.sectionQuestionNumber || 1).padStart(2,'0');
+      return `${current}/${question?.sectionQuestionCount || 15}`;
+    };
+    const loadTcfPaper = async lessonId => {
+      tcfSelectedLesson.value = lessonId;
+      tcfCurrentIndex.value = 0;
+      tcfLoadError.value = '';
+      tcfLoading.value = true;
+      try {
+        const response = await fetch(tcfDataUrl(lessonId), { cache: 'no-store' });
+        if(!response.ok) throw new Error(`HTTP ${response.status}`);
+        const paper = normalizeTcfPaper(await response.json(), lessonId);
+        tcfPapers.value = { ...tcfPapers.value, [lessonId]: paper };
+      } catch (err) {
+        tcfLoadError.value = `${lessonId} 暂未接入结构化题库。请先补充 data/tcf-tv5monde/${lessonId}.json。`;
+      } finally {
+        tcfLoading.value = false;
+      }
+    };
+    const selectTcfLesson = lessonId => loadTcfPaper(lessonId);
+    const getTcfUserAnswer = questionId => currentTcfAnswers.value[questionId] || '';
+    const selectTcfOption = (questionId, answer) => {
+      tcfExamAnswers.value = {
+        ...tcfExamAnswers.value,
+        [tcfSelectedLesson.value]: {
+          ...(tcfExamAnswers.value[tcfSelectedLesson.value] || {}),
+          [questionId]: answer
+        }
+      };
+      saveTcfExamAnswers();
+    };
+    const prevTcfQuestion = () => { if(tcfCurrentIndex.value > 0) tcfCurrentIndex.value -= 1; };
+    const nextTcfQuestion = () => {
+      const last = (currentTcfPaper.value?.questions?.length || 1) - 1;
+      if(tcfCurrentIndex.value < last) tcfCurrentIndex.value += 1;
+    };
+    const upsertDisplayedWrong = item => {
+      const normalized = normalizeQuestion(tcfWrongToQuestion(item), progress.value);
+      const others = items.value.filter(row => row.id !== normalized.id);
+      items.value = [...others, normalized];
+    };
+    const tcfWrongStorageKey = item => `${item.lesson || item.lessonId || 'L01'}-${String(item.questionNumber || item.qno || '').padStart(2,'0')}`;
+    const cleanTcfWrongItem = item => ({
+      lesson: item.lesson || item.lessonId || 'L01',
+      questionNumber: Number(item.questionNumber || item.qno || 0),
+      userAnswer: item.userAnswer || item.myAnswer || '',
+      correctAnswer: normalizeTcfCorrectAnswer(item.correctAnswer),
+      sourcePdf: item.sourcePdf || item.pdfPath || '',
+      questionImage: item.questionImage || '',
+      materialImage: item.materialImage || item.documentImage || item.screenshot || '',
+      reviewCount: Number(item.reviewCount || 0),
+      masteryStatus: item.masteryStatus || '未掌握',
+      lastReviewDate: item.lastReviewDate || item.reviewDate || ''
+    });
+    const buildTcfWrongFromQuestion = (paper, question, userAnswer) => cleanTcfWrongItem({
+      lesson: paper.livretNo,
+      questionNumber: question.questionNumber,
+      userAnswer,
+      correctAnswer: question.correctAnswer || '',
+      sourcePdf: question.sourcePdf || paper.pdfPath || '',
+      questionImage: question.questionImage || '',
+      materialImage: tcfQuestionImage(question),
+      reviewCount: 0,
+      masteryStatus: '未掌握',
+      lastReviewDate: ''
+    });
+    const submitTcfExam = () => {
+      const paper = currentTcfPaper.value;
+      if(!paper) return;
+      const answers = tcfExamAnswers.value[paper.livretNo] || {};
+      const rows = paper.questions.map(question => {
+        const userAnswer = answers[question.id] || '';
+        const correctAnswer = normalizeTcfCorrectAnswer(question.correctAnswer);
+        const isGradable = !!correctAnswer;
+        return {
+          ...question,
+          userAnswer,
+          correctAnswer,
+          isGradable,
+          isCorrect: isGradable && !!userAnswer && userAnswer === correctAnswer
+        };
+      });
+      const answered = rows.filter(row => !!row.userAnswer).length;
+      const gradable = rows.filter(row => row.isGradable).length;
+      const correct = rows.filter(row => row.isCorrect).length;
+      const wrongRows = rows.filter(row => row.isGradable && !!row.userAnswer && row.userAnswer !== row.correctAnswer);
+      const score = {
+        total: TCF_TOTAL_QUESTIONS,
+        answered,
+        gradable,
+        correct,
+        wrong: wrongRows.length,
+        noAnswer: rows.filter(row => !row.isGradable).length,
+        rows,
+        submittedAt: new Date().toISOString()
+      };
+      tcfExamScores.value = { ...tcfExamScores.value, [paper.livretNo]: score };
+      saveTcfExamScores();
+
+      const byId = new Map((Array.isArray(tcfWrongList.value) ? tcfWrongList.value : []).map(item => {
+        const clean = cleanTcfWrongItem(item);
+        return [tcfWrongStorageKey(clean), clean];
+      }));
+      wrongRows.forEach(row => {
+        const item = buildTcfWrongFromQuestion(paper, row, row.userAnswer);
+        const key = tcfWrongStorageKey(item);
+        const old = byId.get(key);
+        const merged = {
+          ...item,
+          reviewCount: Number(old?.reviewCount || 0),
+          masteryStatus: old?.masteryStatus || item.masteryStatus,
+          lastReviewDate: old?.lastReviewDate || ''
+        };
+        byId.set(key, merged);
+        upsertDisplayedWrong(merged);
+      });
+      tcfWrongList.value = Array.from(byId.values());
+      saveTcfWrongList();
+    };
+    const resetTcfExam = () => {
+      if(!confirm('确定要清空当前套题的答题和批改结果吗？错题本记录会保留。')) return;
+      const lessonId = tcfSelectedLesson.value;
+      const nextAnswers = { ...tcfExamAnswers.value };
+      const nextScores = { ...tcfExamScores.value };
+      delete nextAnswers[lessonId];
+      delete nextScores[lessonId];
+      tcfExamAnswers.value = nextAnswers;
+      tcfExamScores.value = nextScores;
+      tcfCurrentIndex.value = 0;
+      saveTcfExamAnswers();
+      saveTcfExamScores();
+    };
+    const getTefAnswer = qno => currentTefAnswers.value[qno] || '';
+    const getCorrectAnswer = qno => TEF_ANSWER_KEYS[tefSection.value]?.[qno] || '';
+    const isTefCorrect = qno => !!getTefAnswer(qno) && getTefAnswer(qno) === getCorrectAnswer(qno);
+    const choiceClass = (qno, choice) => {
+      const selected = getTefAnswer(qno) === choice;
+      if(!isTefSubmitted.value) return { selected };
+      const correct = getCorrectAnswer(qno) === choice;
+      return {
+        selected,
+        correct,
+        wrong: selected && !correct,
+        unanswered: !getTefAnswer(qno)
+      };
+    };
+    const selectTefAnswer = (qno, choice) => {
+      if(!TEF_OBJECTIVE_SECTIONS.includes(tefSection.value)) return;
+      tefAnswers.value = {
+        ...tefAnswers.value,
+        [tefSection.value]: {
+          ...(tefAnswers.value[tefSection.value] || {}),
+          [qno]: choice
+        }
+      };
+      saveTefAnswers();
+      const range = getTefPdfRange(tefSection.value, qno);
+      if(range.start && range.start !== pdfPageNum.value) setPdfPage(range.start);
+    };
+    const goTefQuestion = index => {
+      const nextIndex = Math.min(39, Math.max(0, Number(index) || 0));
+      tefCurrentIndex.value = nextIndex;
+      const range = getTefPdfRange(tefSection.value, nextIndex + 1);
+      if(range.start) setPdfPage(range.start);
+    };
+    const prevTefQuestion = () => goTefQuestion(tefCurrentIndex.value - 1);
+    const nextTefQuestion = () => goTefQuestion(tefCurrentIndex.value + 1);
+    const buildTefWrongItem = (section, qno, myAnswer, correctAnswer) => {
+      const today = todayString();
+      const pdfRange = getTefPdfRange(section, qno);
+      const id = `tef-${section.toLowerCase()}-q${qno}`;
+      const existing = tefWrongList.value.find(item => item.id === id);
+      return {
+        id,
+        title: `TEF ${section} Q${qno}`,
+        sourceExam: 'TEF',
+        mockPaper: 'TEF_test_blanc',
+        section,
+        questionType: getTefQuestionType(section, qno),
+        questionNumber: qno,
+        pdfFileName: 'TEF_test_blanc.pdf',
+        pdfPath: TEF_PDF_URL,
+        pdfPageRange: pdfRange.start === pdfRange.end ? String(pdfRange.start) : `${pdfRange.start}-${pdfRange.end}`,
+        audioUrl: section === 'CO' ? CO_AUDIO_MAP[qno] : '',
+        myAnswer,
+        correctAnswer,
+        wrongReason: '',
+        translation: '',
+        analysis: '',
+        errorPoint: '',
+        transferableRule: '',
+        review: '',
+        masteryStatus: '未掌握',
+        reviewCount: existing ? Number(existing.reviewCount || 0) : 0,
+        wrongCount: existing ? Number(existing.wrongCount || 0) + 1 : 1,
+        lastWrongDate: today,
+        lastReviewDate: existing ? (existing.lastReviewDate || '') : ''
+      };
+    };
+    const saveTefWrongAnswers = (section, wrongRows) => {
+      const byId = new Map(tefWrongList.value.map(item => [item.id, item]));
+      wrongRows.forEach(row => {
+        const item = buildTefWrongItem(section, row.qno, row.myAnswer, row.correctAnswer);
+        byId.set(item.id, { ...(byId.get(item.id) || {}), ...item });
+      });
+      tefWrongList.value = Array.from(byId.values());
+      saveTefWrongList();
+    };
+    const submitTefSection = () => {
+      if(!TEF_OBJECTIVE_SECTIONS.includes(tefSection.value)) return;
+      const section = tefSection.value;
+      const answers = tefAnswers.value[section] || {};
+      const rows = tefQuestionNumbers.map(qno => ({
+        qno,
+        myAnswer: answers[qno] || '',
+        correctAnswer: TEF_ANSWER_KEYS[section][qno]
+      }));
+      const answered = rows.filter(row => row.myAnswer).length;
+      const correct = rows.filter(row => row.myAnswer && row.myAnswer === row.correctAnswer).length;
+      const wrongRows = rows.filter(row => row.myAnswer && row.myAnswer !== row.correctAnswer);
+      const score = {
+        total: TCF_TOTAL_QUESTIONS,
+        answered,
+        correct,
+        wrong: wrongRows.length,
+        unanswered: 40 - answered,
+        rate: Math.round((correct / 40) * 1000) / 10,
+        rateRounded: Math.round((correct / 40) * 100),
+        level: tefLevelFromCorrect(correct),
+        rows,
+        submittedAt: new Date().toISOString()
+      };
+      tefScores.value = { ...tefScores.value, [section]: score };
+      saveTefScores();
+      saveTefWrongAnswers(section, wrongRows);
+    };
+    const resetTefPractice = () => {
+      if(!confirm('确定要清空本次 TEF 答题记录和判分结果吗？错题本记录会保留。')) return;
+      tefAnswers.value = { CE:{}, CO:{}, LS:{} };
+      tefScores.value = {};
+      saveTefAnswers();
+      saveTefScores();
+    };
+    const exportTefWrongJson = () => {
+      const blob = new Blob([JSON.stringify(tefWrongList.value, null, 2)], { type:'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tef-wrong-questions-${todayString()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    };
+    const markAudioMissing = qno => {
+      audioMissing.value = { ...audioMissing.value, [qno]: true };
+    };
+    const setTefSection = section => {
+      tefSection.value = section;
+      tefCurrentIndex.value = 0;
+      audioMissing.value = {};
+      nextTick(() => setPdfPage(getTefPdfRange(section, 1).start));
+    };
+    const goTefWritingSpeakingPage = () => setPdfPage(getTefPdfRange(tefSection.value, 1).start);
+    const ensurePdf = async () => {
+      if(pdfDoc) return pdfDoc;
+      if(!window.pdfjsLib){
+        pdfError.value = 'PDF.js CDN 未能加载，请确认网络可访问 cdnjs.cloudflare.com。';
+        return null;
+      }
+      pdfLoading.value = true;
+      pdfError.value = '';
+      try {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        const doc = await window.pdfjsLib.getDocument(TEF_PDF_URL).promise;
+        pdfDoc = doc;
+        pdfPageCount.value = doc.numPages;
+        return doc;
+      } catch (err) {
+        pdfError.value = `PDF 加载失败：${err?.message || err}`;
+        return null;
+      } finally {
+        pdfLoading.value = false;
+      }
+    };
+    const renderPdfPage = async pageNum => {
+      const doc = await ensurePdf();
+      if(!doc || !pdfCanvas.value) return;
+      const safePage = Math.min(Math.max(Number(pageNum) || 1, 1), doc.numPages);
+      pdfLoading.value = true;
+      pdfError.value = '';
+      try {
+        if(pdfRenderTask) {
+          try { pdfRenderTask.cancel(); } catch {}
+        }
+        const page = await doc.getPage(safePage);
+        const viewport = page.getViewport({ scale: pdfScale.value });
+        const canvas = pdfCanvas.value;
+        const context = canvas.getContext('2d');
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+        pdfRenderTask = page.render({ canvasContext: context, viewport });
+        await pdfRenderTask.promise;
+        pdfPageNum.value = safePage;
+        pdfJumpPage.value = safePage;
+      } catch (err) {
+        if(err?.name !== 'RenderingCancelledException') pdfError.value = `PDF 渲染失败：${err?.message || err}`;
+      } finally {
+        pdfLoading.value = false;
+      }
+    };
+    const setPdfPage = pageNum => nextTick(() => renderPdfPage(pageNum));
+    const prevPdfPage = () => setPdfPage(pdfPageNum.value - 1);
+    const nextPdfPage = () => setPdfPage(pdfPageNum.value + 1);
+    const jumpPdfPage = () => setPdfPage(pdfJumpPage.value);
+    const zoomPdf = delta => {
+      pdfScale.value = Math.min(2.2, Math.max(0.7, Math.round((pdfScale.value + delta) * 100) / 100));
+      setPdfPage(pdfPageNum.value);
+    };
 
     const questionTypeOptions = computed(() => {
       if(categoryTab.value === '语法') return grammarTypes;
@@ -514,11 +1846,13 @@ createApp({
     };
     const matchesBaseFilters = (item, overrides = {}) => {
       const exam = overrides.exam ?? examTab.value;
+      const source = overrides.source ?? sourceTab.value;
       const category = overrides.category ?? categoryTab.value;
       const qtype = overrides.questionType ?? questionTypeTab.value;
       const mastery = overrides.mastery ?? masteryTab.value;
       const review = overrides.review ?? reviewTab.value;
       return (exam === '全部' || item.exam_type === exam)
+        && (source === '全部' || (item.source || '原始错题') === source)
         && (category === '全部' || item.main_category === category)
         && (qtype === '全部' || item.questionType === qtype)
         && (mastery === '全部' || item.masteryStatus === mastery)
@@ -527,6 +1861,7 @@ createApp({
 
     const count = c => items.value.filter(i => i.main_category === c).length;
     const examCount = exam => items.value.filter(i => matchesBaseFilters(i,{exam})).length;
+    const sourceCount = source => items.value.filter(i => matchesBaseFilters(i,{source})).length;
     const categoryCount = category => items.value.filter(i => matchesBaseFilters(i,{category})).length;
     const questionTypeCount = questionType => items.value.filter(i => matchesBaseFilters(i,{questionType})).length;
     const masteryCount = mastery => items.value.filter(i => matchesBaseFilters(i,{mastery})).length;
@@ -643,9 +1978,20 @@ createApp({
       });
     };
 
-    return { items, loading, error, examTab, examTabs, categoryTab, categoryTabs, questionTypeTab, questionTypeOptions,
+    return { items, loading, error, examTab, examTabs, sourceTab, sourceOptions, categoryTab, categoryTabs, questionTypeTab, questionTypeOptions,
              masteryTab, masteryTabs, reviewTab, reviewTabs, q, open, historyOpen, reviewingId, reviewResults,
-             expandedStem, overflowing, lightbox, count, examCount, categoryCount, questionTypeCount, masteryCount,
+             expandedStem, overflowing, lightbox, mode, tefSections, tefObjectiveSections, tefSection, tefChoices,
+             coAudioMap, audioMissing, pdfCanvas, pdfPageNum, pdfJumpPage, pdfPageCount, pdfScale, pdfLoading, pdfError,
+             currentTefTitle, currentTefSectionNote, tefAnsweredCount, tefQuestionGroups, isTefSubmitted,
+             tefCurrentIndex, currentTefQuestionNo, currentTefQuestionType, tefSectionLabel,
+             currentTefScore, tefWrongList, showMistakes, showTef, setTefSection, getTefAnswer, getCorrectAnswer,
+             isTefCorrect, choiceClass, selectTefAnswer, submitTefSection, resetTefPractice, exportTefWrongJson,
+             markAudioMissing, prevTefQuestion, nextTefQuestion, prevPdfPage, nextPdfPage, jumpPdfPage, zoomPdf, goTefWritingSpeakingPage,
+             showTcf, tcfLessons, tcfSections, tcfFormOpen, tcfDraft, toggleTcfForm, saveTcfWrong,
+             tcfSelectedLesson, selectTcfLesson, hasTcfData, tcfLessonSummary, tcfLoading, tcfLoadError, currentTcfPaper,
+             currentTcfQuestion, tcfCurrentIndex, tcfAnsweredCount, tcfProgressPercent, currentTcfScore, tcfSectionScores,
+             tcfAssetPath, tcfQuestionText, tcfQuestionImage, tcfSectionProgress, getTcfUserAnswer, selectTcfOption, prevTcfQuestion, nextTcfQuestion, submitTcfExam, resetTcfExam,
+             count, examCount, sourceCount, categoryCount, questionTypeCount, masteryCount,
              reviewFilterCount, dueTodayCount, reviewedCount, redoCount, filtered, isDue, formatLastReviewed,
              formatNextReview, statusClass, setCategoryTab, startReview, completeReview, updateNextReview, markMastered, markRedo,
              undoReview, reviewActionSteps, toggle, toggleHistory, allOpen, toggleAll, toggleStem, setStemRef };

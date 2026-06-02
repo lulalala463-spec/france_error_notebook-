@@ -1,0 +1,19 @@
+{
+  "L01": { "title": "TV5MONDE L01", "questionCount": 40, "pdf": "/tcf-tv5monde/L01/TCF_TV5_L01_livret.pdf", "audio": "/tcf-tv5monde/L01/tcf1-podcast.mp3" },
+  "L02": { "title": "TV5MONDE L02", "questionCount": 40, "pdf": "/tcf-tv5monde/L02/TCF_TV5_L02_livret.pdf", "audio": "/tcf-tv5monde/L02/tcf2-podcast.mp3" },
+  "L03": { "title": "TV5MONDE L03", "questionCount": 40, "pdf": "/tcf-tv5monde/L03/TCF_TV5_L03_livret.pdf", "audio": "/tcf-tv5monde/L03/tcf3-podcast.mp3" },
+  "L04": { "title": "TV5MONDE L04", "questionCount": 40, "pdf": "/tcf-tv5monde/L04/TCF_TV5_L04_livret.pdf", "audio": "/tcf-tv5monde/L04/tcf4-podcast.mp3" },
+  "L05": { "title": "TV5MONDE L05", "questionCount": 40, "pdf": "/tcf-tv5monde/L05/TCF_TV5_L05_livret.pdf", "audio": "/tcf-tv5monde/L05/tcf5-podcast.mp3" },
+  "L06": { "title": "TV5MONDE L06", "questionCount": 40, "pdf": "/tcf-tv5monde/L06/TCF_TV5_L06_livret.pdf", "audio": "/tcf-tv5monde/L06/tcf6-podcast.mp3" },
+  "L07": { "title": "TV5MONDE L07", "questionCount": 40, "pdf": "/tcf-tv5monde/L07/TCF_TV5_L07_livret.pdf", "audio": "/tcf-tv5monde/L07/tcf7-podcast.mp3" },
+  "L08": { "title": "TV5MONDE L08", "questionCount": 40, "pdf": "/tcf-tv5monde/L08/TCF_TV5_L08_livret.pdf", "audio": "/tcf-tv5monde/L08/tcf8-podcast.mp3" },
+  "L09": { "title": "TV5MONDE L09", "questionCount": 40, "pdf": "/tcf-tv5monde/L09/TCF_TV5_L09_livret.pdf", "audio": "/tcf-tv5monde/L09/tcf9-podcast.mp3" },
+  "L10": { "title": "TV5MONDE L10", "questionCount": 40, "pdf": "/tcf-tv5monde/L10/TCF_TV5_L10_livret.pdf", "audio": "/tcf-tv5monde/L10/tcf10-podcast.mp3" },
+  "L11": { "title": "TV5MONDE L11", "questionCount": 40, "pdf": "/tcf-tv5monde/L11/TCF_TV5_L11_livret.pdf", "audio": "/tcf-tv5monde/L11/tcf11-podcast.mp3" },
+  "L12": { "title": "TV5MONDE L12", "questionCount": 40, "pdf": "/tcf-tv5monde/L12/TCF_TV5_L12_livret.pdf", "audio": "/tcf-tv5monde/L12/tcf12-podcast.mp3" },
+  "L13": { "title": "TV5MONDE L13", "questionCount": 40, "pdf": "/tcf-tv5monde/L13/TCF_TV5_L13_livret.pdf", "audio": "/tcf-tv5monde/L13/tcf13-podcast.mp3" },
+  "L14": { "title": "TV5MONDE L14", "questionCount": 40, "pdf": "/tcf-tv5monde/L14/TCF_TV5_L14_livret.pdf", "audio": "/tcf-tv5monde/L14/tcf14-podcast.mp3" },
+  "L15": { "title": "TV5MONDE L15", "questionCount": 40, "pdf": "/tcf-tv5monde/L15/TCF_TV5_L15_livret.pdf", "audio": "/tcf-tv5monde/L15/tcf15-podcast.mp3" },
+  "L16": { "title": "TV5MONDE L16", "questionCount": 40, "pdf": "/tcf-tv5monde/L16/TCF_TV5_L16_livret.pdf", "audio": "/tcf-tv5monde/L16/tcf16-podcast.mp3" },
+  "L17": { "title": "TV5MONDE L17", "questionCount": 40, "pdf": "/tcf-tv5monde/L17/TCF_TV5_L17_livret.pdf", "audio": "/tcf-tv5monde/L17/tcf17-podcast.mp3" }
+}
