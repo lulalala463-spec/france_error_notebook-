@@ -164,6 +164,18 @@
   .sec.r h4{color:#475569;}
   .sec p{margin:0;color:#39404f;}
   .sec ol{margin:0;padding-left:20px;color:#39404f;}
+  .analysis-block{display:grid;gap:10px;}
+  .analysis-list{display:grid;gap:8px;margin:0;padding:0;list-style:none;}
+  .analysis-list li{background:#fff;border:1px solid #e6e9f4;border-radius:10px;padding:9px 10px;color:#39404f;}
+  .analysis-list b{color:#1f2937;}
+  .option-grid{display:grid;gap:8px;}
+  .option-note{background:#fff;border:1px solid #e6e9f4;border-radius:10px;padding:9px 10px;color:#39404f;}
+  .option-note.correct{border-color:var(--ok-line);background:var(--ok-bg);}
+  .option-note.wrong{border-color:var(--warn-line);background:#fffafa;}
+  .option-note .option-head{display:flex;gap:8px;align-items:center;font-weight:800;color:#1f2937;margin-bottom:4px;}
+  .option-note .option-tag{font-size:11px;border-radius:999px;padding:2px 7px;background:#eef2ff;color:var(--brand);}
+  .option-note.correct .option-tag{background:#dcfce7;color:#047857;}
+  .example-line{margin-top:6px;font-size:13px;color:#475569;}
 
   /* TEF mock exam */
   .mode-switch{padding:24px 0 0;}
@@ -505,10 +517,40 @@
                 <b>题目材料图片</b>
                 <img :src="it.image_path" :alt="it.id" style="width:100%;border-radius:10px;cursor:zoom-in;" @click="lightbox=it.image_path" />
               </div>
-              <div class="sec a"><h4>📖 详细解析</h4><p>{{ it.analysis || '暂无解析。' }}</p></div>
+              <div class="sec a">
+                <h4>📖 详细解析</h4>
+                <div class="analysis-block">
+                  <p>{{ structuredAnalysis(it).summary }}</p>
+                  <template v-if="it.main_category==='语法'">
+                    <ul class="analysis-list">
+                      <li v-for="point in structuredAnalysis(it).grammarPoints" :key="point"><b>语法点：</b>{{ point }}</li>
+                    </ul>
+                    <ul v-if="structuredAnalysis(it).fixedCollocations.length" class="analysis-list">
+                      <li v-for="collocation in structuredAnalysis(it).fixedCollocations" :key="collocation"><b>固定搭配：</b>{{ collocation }}</li>
+                    </ul>
+                    <div class="option-grid">
+                      <div v-for="option in structuredAnalysis(it).optionAnalyses" :key="option.key" class="option-note" :class="{correct:option.correct, wrong:!option.correct}">
+                        <div class="option-head"><span>{{ option.key }}. {{ option.text }}</span><span class="option-tag">{{ option.correct ? '正确项' : '排除项' }}</span></div>
+                        <div>{{ option.reason }}</div>
+                        <div class="example-line"><b>例句：</b>{{ option.example }}<br/><b>翻译：</b>{{ option.translation }}</div>
+                      </div>
+                    </div>
+                  </template>
+                  <template v-else-if="it.main_category==='阅读'">
+                    <ul class="analysis-list">
+                      <li><b>阅读题型：</b>{{ structuredAnalysis(it).readingType }}</li>
+                      <li><b>对应原文：</b>{{ structuredAnalysis(it).evidence }}</li>
+                      <li><b>错因分析：</b>{{ structuredAnalysis(it).readingError }}</li>
+                    </ul>
+                  </template>
+                  <template v-else>
+                    <p>听力错题先保留音频、答案和复盘入口，详细听力解析后续再补。</p>
+                  </template>
+                </div>
+              </div>
               <div class="sec k"><h4>🎯 核心考点</h4><p>{{ it.key_point }}</p></div>
-              <div class="sec e"><h4>⚠️ 常见错因 / 笔记</h4><p>{{ it.error_reason || '（暂无，可自行补充）' }}</p></div>
-              <div class="sec r"><h4>复盘动作</h4><ol><li v-for="step in reviewActionSteps(it)" :key="step">{{ step }}</li></ol></div>
+              <div class="sec e"><h4>⚠️ 常见错因 / 笔记</h4><p>{{ structuredAnalysis(it).errorReason }}</p></div>
+              <div class="sec r"><h4>考前复习速通</h4><ol><li v-for="tip in structuredAnalysis(it).quickReview" :key="tip">{{ tip }}</li></ol></div>
               <div class="sec r">
                 <h4>复习历史</h4>
                 <p v-if="!it.reviewHistory.length">暂无复习记录</p>
@@ -897,7 +939,7 @@ if (localStorage.getItem(wrongClearVersionKey) !== wrongClearVersion) {
   localStorage.removeItem(progressKey);
   localStorage.setItem(wrongClearVersionKey, wrongClearVersion);
 }
-const TCF_DATA_VERSION = '20260602-tv5monde-co-sl-ce-answers-summary';
+const TCF_DATA_VERSION = '20260603-structured-wrong-analysis';
 const tefChoices = ['A','B','C','D'];
 const tefQuestionNumbers = Array.from({length:40},(_,i)=>i+1);
 const TCF_SECTIONS = [
@@ -988,9 +1030,175 @@ const addDays = (date,days) => {
 const progressId = item => String(item.id || '').toUpperCase();
 const textOf = item => [item.sub_type,item.key_point,item.original_text,item.analysis,item.error_reason].filter(Boolean).join(' ');
 const includesAny = (text, words) => words.some(w => text.includes(w));
+const CHOICE_KEYS = ['A','B','C','D'];
+
+function normalizeCategory(value){
+  const text = String(value || '');
+  if(text.includes('听') || text.includes('orale') || text === 'CO') return '听力';
+  if(text.includes('Structure') || text.includes('语法') || text === 'LS') return '语法';
+  if(text.includes('阅读') || text.includes('écrite') || text === 'CE') return '阅读';
+  return text || '阅读';
+}
+
+function choiceTextFromItem(item, key){
+  const options = item.options || {};
+  if(options && typeof options === 'object' && !Array.isArray(options) && options[key]) return String(options[key]);
+  if(Array.isArray(options)){
+    const found = options.find(option => String(option?.key || option?.label || '').toUpperCase() === key);
+    if(found) return String(found.text || found.value || found.label || '');
+  }
+  const text = String(item.original_text || '');
+  const match = text.match(new RegExp(`${key}[\\.．、]\\s*([^\\n]+)`));
+  return match ? match[1].trim() : `选项 ${key}`;
+}
+
+function correctChoice(item){
+  const answer = String(item.correct_answer || item.correctAnswer || '').trim().toUpperCase();
+  const direct = answer.match(/\b[A-D]\b/);
+  return direct ? direct[0] : '';
+}
+
+function grammarPointsForItem(item){
+  const text = textOf(item);
+  const points = [];
+  if(includesAny(text,['固定搭配','搭配','au profit','quant à','faire grâce','n’importe','n\'importe'])) points.push('先看是否存在固定搭配，固定搭配优先于逐词翻译。');
+  if(includesAny(text,['介词',' au ',' de ',' à ',' pour ',' par ',' sur '])) points.push('介词题要看前后支配关系：动词/名词/形容词常常固定接某个介词。');
+  if(includesAny(text,['关系代词',' qui ',' que ',' dont ',' où '])) points.push('关系代词题先判断从句缺什么成分：缺主语用 qui，缺直接宾语用 que，缺 de 补语用 dont，地点/时间用 où。');
+  if(includesAny(text,['动词辨析','venir','aller','partir','sortir'])) points.push('动词辨析题要看方向、对象和语义场，不能只按中文直译选。');
+  if(includesAny(text,['时态','虚拟式','条件式','变位'])) points.push('时态语式题先看触发词，再看主从句时间关系。');
+  if(includesAny(text,['冠词','限定词','aucun','chaque','plusieurs'])) points.push('限定词题要看名词性数、可数性和语义范围。');
+  if(!points.length) points.push('先识别题干中的语法触发点，再判断选项是否满足搭配、语义和句法位置。');
+  return points;
+}
+
+function fixedCollocationsForItem(item){
+  const text = textOf(item);
+  const found = [];
+  const rules = [
+    ['au profit', 'au profit de + 名词：为了……的利益，惠及……'],
+    ['quant', 'quant à + 名词/重读人称代词：至于……，就……而言'],
+    ['faire grâce', 'faire grâce de qch à qn：省去/免去某人某事'],
+    ["n'importe", "n'importe lequel/laquelle/lesquels/lesquelles：无论哪一个，需和所指名词性数一致"],
+    ['adéquation', 'adéquation entre A et B：A 与 B 之间的匹配/契合'],
+    ['reporté', 'reporter qch à + 时间：把某事推迟到某时间']
+  ];
+  rules.forEach(([needle, label]) => {
+    if(text.toLowerCase().includes(needle.toLowerCase())) found.push(label);
+  });
+  return found;
+}
+
+function grammarExampleForOption(item, key, isCorrect){
+  const text = textOf(item);
+  if(includesAny(text,['venir','aller'])){
+    return isCorrect
+      ? { example:'Tu peux venir chez moi ce soir.', translation:'你今晚可以来我家。' }
+      : { example:'Je vais chez Paul après le cours.', translation:'下课后我去保罗家。' };
+  }
+  if(includesAny(text,['关系代词',' qui ',' que ',' dont ',' où '])){
+    return isCorrect
+      ? { example:'Le livre que je lis est intéressant.', translation:'我正在读的那本书很有趣。' }
+      : { example:'La personne qui parle est ma professeure.', translation:'正在说话的人是我的老师。' };
+  }
+  if(includesAny(text,['介词','固定搭配',' au ',' de ',' à '])){
+    return isCorrect
+      ? { example:'Cette aide est destinée aux étudiants.', translation:'这项帮助是给学生的。' }
+      : { example:'Il dépend de ses parents.', translation:'他依赖父母。' };
+  }
+  if(includesAny(text,['n’importe',"n'importe"])){
+    return isCorrect
+      ? { example:'Choisis une robe, n’importe laquelle me convient.', translation:'选一条裙子吧，哪一条都适合我。' }
+      : { example:'N’importe qui peut participer.', translation:'任何人都可以参加。' };
+  }
+  return isCorrect
+    ? { example:'Cette réponse respecte la construction de la phrase.', translation:'这个答案符合句子的结构。' }
+    : { example:'Cette forme peut être correcte dans un autre contexte.', translation:'这个形式在另一个语境中可能是正确的。' };
+}
+
+function optionAnalysesForItem(item){
+  if(Array.isArray(item.option_analysis) && item.option_analysis.length){
+    return CHOICE_KEYS.map(key => {
+      const imported = item.option_analysis.find(row => String(row.key || '').toUpperCase() === key) || {};
+      const isCorrect = key === correctChoice(item);
+      const example = imported.example ? { example: imported.example, translation: imported.translation || '' } : grammarExampleForOption(item, key, isCorrect);
+      return {
+        key,
+        text: imported.text || choiceTextFromItem(item, key),
+        correct: imported.correct ?? isCorrect,
+        reason: imported.reason || (isCorrect ? `选 ${key}，符合本题搭配和语义。` : `不选 ${key}，与本题搭配或语义不合。`),
+        ...example
+      };
+    });
+  }
+  const correct = correctChoice(item);
+  return CHOICE_KEYS.map(key => {
+    const text = choiceTextFromItem(item, key);
+    const isCorrect = key === correct;
+    const example = grammarExampleForOption(item, key, isCorrect);
+    return {
+      key,
+      text,
+      correct: isCorrect,
+      reason: isCorrect
+        ? `选 ${key}，因为它同时满足题干语义、句法位置和核心考点要求。复习时要把它和题干中的触发词一起记。`
+        : `不选 ${key}，因为它没有解决本题真正考的语法关系；它可能在别的句子里成立，但放进本题会造成搭配、成分或语义不合。`,
+      ...example
+    };
+  });
+}
+
+function readingEvidence(item){
+  const candidates = [
+    item.location_signal,
+    item.evidenceSentence,
+    item.documentText,
+    item.original_text,
+    item.text,
+    item.questionText
+  ].filter(Boolean).map(value => String(value).trim());
+  if(!candidates.length) return '当前错题未保存原文材料；请回到 PDF/题图定位答案句。';
+  const source = candidates[0].replace(/\s+/g, ' ');
+  return source.length > 180 ? `${source.slice(0, 180)}…` : source;
+}
+
+function readingTypeForItem(item){
+  const text = textOf(item);
+  if(includesAny(text,['同义','改写','synonyme'])) return '同义改写';
+  if(includesAny(text,['细节','数字','时间','地点','谁','什么'])) return '细节理解';
+  if(includesAny(text,['主旨','标题','目的','objectif'])) return '主旨/写作目的';
+  if(includesAny(text,['推断','d’après','infer'])) return '推断判断';
+  return item.questionType || '细节理解';
+}
+
+function structuredAnalysisForItem(item){
+  const category = normalizeCategory(item.main_category);
+  const importedQuickReview = Array.isArray(item.quick_review)
+    ? item.quick_review
+    : String(item.quick_review || '').split(/[；;\n]/).map(v => v.trim()).filter(Boolean);
+  const baseSummary = item.analysis || (category === '语法'
+    ? '本题按“识别语法点 -> 判断固定搭配/支配关系 -> 逐项排除”的顺序复盘。'
+    : category === '阅读'
+      ? '本题按“题型 -> 定位原文 -> 同义改写/细节对应 -> 错因”的顺序复盘。'
+      : '听力题先保留音频和答案，之后可补充听力原文与干扰项分析。');
+  return {
+    summary: baseSummary,
+    errorReason: item.error_reason || (category === '阅读' ? '常见错因是没有回到原文定位，或被选项里的近义词/偷换范围干扰。' : '常见错因是按中文直译选择，没有检查固定搭配、句法成分和语义范围。'),
+    grammarPoints: Array.isArray(item.grammar_points) && item.grammar_points.length ? item.grammar_points : grammarPointsForItem(item),
+    fixedCollocations: Array.isArray(item.fixed_collocations) && item.fixed_collocations.length ? item.fixed_collocations : fixedCollocationsForItem(item),
+    optionAnalyses: optionAnalysesForItem(item),
+    readingType: item.reading_type || readingTypeForItem(item),
+    evidence: readingEvidence(item),
+    readingError: item.error_reason || '先划出题干关键词，再找原文对应句；若选项使用同义替换，要确认范围和对象完全一致。',
+    quickReview: importedQuickReview.length ? importedQuickReview : (category === '语法'
+      ? ['固定搭配 / 支配关系需要直接记住。', '把正确选项和题干触发词一起背。', '同义干扰项只在其他语境成立。']
+      : category === '阅读'
+        ? ['定位信号与正确答案之间的同义替换要直接背。', '记住文中关键词对应选项表达。', '干扰项常偷换对象、范围、时间或态度。']
+        : ['听力关键词和答案同义表达一起记。', '数字、人名、地点、态度词优先复听。'])
+  };
+}
 
 function inferQuestionType(item){
-  const section = item.main_category || item.section || item.type || item.category || '';
+  const section = normalizeCategory(item.main_category || item.section || item.type || item.category || '');
   const text = textOf(item);
   if(section === '语法'){
     if(includesAny(text,['venir','aller','sortir','partir','动词辨析'])) return '动词辨析';
@@ -1026,9 +1234,10 @@ function inferMicroType(item){
   return (m ? m[1] : source) || '未细分';
 }
 
-function tcfSectionToCategory(section){
-  if(String(section).includes('orale')) return '听力';
-  if(String(section).includes('Structures')) return '语法结构';
+function tcfSectionToCategory(section, sectionKey = ''){
+  const text = `${section || ''} ${sectionKey || ''}`;
+  if(text.includes('orale') || text.includes('CO') || text.includes('听力')) return '听力';
+  if(text.includes('Structure') || text.includes('SL') || text.includes('语法')) return '语法';
   return '阅读';
 }
 
@@ -1048,7 +1257,7 @@ function tcfWrongToQuestion(item){
     source: item.source || 'TV5MONDE 官方训练',
       lessonId,
       questionNumber: qno,
-      main_category: tcfSectionToCategory(section),
+      main_category: normalizeCategory(item.main_category || item.category || tcfSectionToCategory(section, item.sectionKey)),
       sub_type: section,
       questionType: item.questionType || item.errorType || section,
       microType: lessonId,
@@ -1056,8 +1265,11 @@ function tcfWrongToQuestion(item){
     audio_path: item.audioPath || (String(section).includes('orale') ? lessonAudioPath(lessonId) : ''),
     original_text: item.questionText || item.text || item.original_text || '请查看原题截图或原 PDF 作答。',
     correct_answer: item.correctAnswer || '',
+    options: item.options || {},
+    documentText: item.documentText || '',
+    evidenceSentence: item.evidenceSentence || '',
     myAnswer: item.userAnswer || item.myAnswer || '',
-    analysis: item.analysis || '',
+    analysis: item.analysis || item.explanation || '',
     key_point: item.errorPoint || item.errorType || section,
     error_reason: item.errorReason || item.wrongReason || '',
       translation: item.translation || '',
@@ -1080,7 +1292,7 @@ function tefWrongToQuestion(item){
     source: item.sourceExam || item.source || 'TEF 模拟卷',
     lessonId: item.mockPaper || 'TEF_test_blanc',
     questionNumber: item.questionNumber || '',
-    main_category: section === 'CO' ? '听力' : (section === 'LS' ? '语法' : '阅读'),
+    main_category: normalizeCategory(section === 'CO' ? '听力' : (section === 'LS' ? '语法' : '阅读')),
     sub_type: section,
     questionType: item.questionType || section,
     microType: item.pdfPageRange ? `PDF ${item.pdfPageRange}` : section,
@@ -1088,6 +1300,8 @@ function tefWrongToQuestion(item){
     audio_path: item.audioUrl || '',
     original_text: item.title || `TEF ${section} Q${item.questionNumber || '?'}`,
     correct_answer: item.correctAnswer || '',
+    options: item.options || {},
+    documentText: item.documentText || '',
     analysis: item.analysis || '',
     key_point: item.errorPoint || item.questionType || section,
     error_reason: item.wrongReason || '',
@@ -1114,7 +1328,7 @@ function normalizeQuestion(item, progress){
     ...item,
     exam_type: item.exam_type || item.examType || item.exam || '',
     source: item.source || item.sourceExam || item.origin || '原始错题',
-    main_category: item.main_category || item.section || item.type || item.category || '',
+    main_category: normalizeCategory(item.main_category || item.section || item.type || item.category || ''),
     questionType: item.questionType || inferQuestionType(item),
     microType: item.microType || inferMicroType(item),
     reviewAction: item.reviewAction || '',
@@ -1136,7 +1350,7 @@ createApp({
     const examTabs = ['全部','TCF','TEF'];
     const sourceTab = ref('全部');
     const categoryTab = ref('全部');
-    const categoryTabs = ['全部','语法','语法结构','阅读','听力'];
+    const categoryTabs = ['全部','语法','阅读','听力'];
     const questionTypeTab = ref('全部');
     const masteryTab = ref('全部');
     const masteryTabs = ['全部',...masteryStatuses];
@@ -1184,14 +1398,16 @@ createApp({
     };
     const saveProgress = () => localStorage.setItem(progressKey, JSON.stringify(progress.value));
     const refreshItems = raw => {
-      items.value = [...raw, ...loadLocalWrongQuestions()].map(item => normalizeQuestion(item, progress.value));
+      items.value = [...raw, ...loadLocalWrongQuestions()]
+        .map(item => normalizeQuestion(item, progress.value))
+        .sort((a,b) => Number(a.sort_order || 9999) - Number(b.sort_order || 9999) || String(a.id).localeCompare(String(b.id)));
     };
 
     loadProgress();
-    fetch('data.json')
+    fetch(`data.json?v=${TCF_DATA_VERSION}`, { cache: 'no-store' })
       .then(r => { if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
       .then(d => { refreshItems(d); })
-      .catch(() => { error.value = true; })
+      .catch(() => { refreshItems([]); error.value = false; })
       .finally(() => { loading.value = false; });
 
     const today = computed(() => todayString());
@@ -1550,8 +1766,17 @@ createApp({
     const cleanTcfWrongItem = item => ({
       lesson: item.lesson || item.lessonId || 'L01',
       questionNumber: Number(item.questionNumber || item.qno || 0),
+      section: item.section || '',
+      sectionKey: item.sectionKey || '',
+      subType: item.subType || '',
+      questionText: item.questionText || item.prompt || item.text || '',
+      options: item.options || {},
       userAnswer: item.userAnswer || item.myAnswer || '',
       correctAnswer: normalizeTcfCorrectAnswer(item.correctAnswer),
+      documentText: item.documentText || '',
+      explanation: item.explanation || item.analysis || '',
+      trap: item.trap || '',
+      transferableRule: item.transferableRule || '',
       sourcePdf: item.sourcePdf || item.pdfPath || '',
       questionImage: item.questionImage || '',
       materialImage: item.materialImage || item.documentImage || item.screenshot || '',
@@ -1562,8 +1787,17 @@ createApp({
     const buildTcfWrongFromQuestion = (paper, question, userAnswer) => cleanTcfWrongItem({
       lesson: paper.livretNo,
       questionNumber: question.questionNumber,
+      section: question.section,
+      sectionKey: question.sectionKey,
+      subType: question.subType,
+      questionText: tcfQuestionText(question),
+      options: question.options || {},
       userAnswer,
       correctAnswer: question.correctAnswer || '',
+      documentText: question.documentText || '',
+      explanation: question.explanation || '',
+      trap: question.trap || '',
+      transferableRule: question.transferableRule || '',
       sourcePdf: question.sourcePdf || paper.pdfPath || '',
       questionImage: question.questionImage || '',
       materialImage: tcfQuestionImage(question),
@@ -1991,6 +2225,7 @@ createApp({
              tcfSelectedLesson, selectTcfLesson, hasTcfData, tcfLessonSummary, tcfLoading, tcfLoadError, currentTcfPaper,
              currentTcfQuestion, tcfCurrentIndex, tcfAnsweredCount, tcfProgressPercent, currentTcfScore, tcfSectionScores,
              tcfAssetPath, tcfQuestionText, tcfQuestionImage, tcfSectionProgress, getTcfUserAnswer, selectTcfOption, prevTcfQuestion, nextTcfQuestion, submitTcfExam, resetTcfExam,
+             structuredAnalysis: structuredAnalysisForItem,
              count, examCount, sourceCount, categoryCount, questionTypeCount, masteryCount,
              reviewFilterCount, dueTodayCount, reviewedCount, redoCount, filtered, isDue, formatLastReviewed,
              formatNextReview, statusClass, setCategoryTab, startReview, completeReview, updateNextReview, markMastered, markRedo,
